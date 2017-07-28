@@ -1,21 +1,39 @@
 import discord
 from discord.ext import commands
+import GameTimer
 
 import logging
 
 f = open(file="token.txt", mode="r")
 token = " ".join(f.readline().split())
-
+# ------------------------------------------------------------------------------
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-
+# ------------------------------------------------------------------------------
 description = '''Чат-бот для игры в fallacymania'''
 bot = commands.Bot(command_prefix='?', description=description)
 client = discord.Client()
 server = discord.Server
+# ------------------------------------------------------------------------------
+paused = False
+started = False
+
+
+def end():
+    print("Игра закончилась")
+    @bot.event
+    async def end_game():
+        print("2Игра закончилась2")
+        global started
+        started = False
+        await bot.say("Игра закончилась")
+
+
+game_timer = GameTimer.RenewableTimer(1, end)
+
 
 
 @bot.event
@@ -31,7 +49,46 @@ async def on_ready():
 @bot.command()
 async def старт():
     """Начать игру"""
-    await bot.say()
+    global game_timer
+    global started
+    global paused
+    # Если таймер не запущен и игра не на паузе
+    if not (game_timer.timer.isAlive() or paused):
+        game_timer = GameTimer.RenewableTimer(1, end)
+        game_timer.start()
+        await bot.say("Игра началась")
+        started = True
+    # Если таймер запущен
+    elif game_timer.timer.isAlive():
+        await bot.say("Таймер уже запущен")
+        game_timer.pause()
+        s = int(game_timer.get_actual_time())
+        m = int(s/60)
+        await bot.say("Осталось {0}м {1}с".format(m, s))
+        game_timer.resume()
+    elif paused:
+        game_timer.resume()
+        await bot.say("Игра продолжается")
+
+
+
+@bot.command()
+async def пауза():
+    """приостановить таймер"""
+    global game_timer
+    global paused
+    global started
+    if started:
+        game_timer.pause()
+        game_timer.get_actual_time()
+        paused = True
+        await bot.say("Пауза")
+        s = int(game_timer.get_actual_time())
+        m = int(s/60)
+        await bot.say("Осталось {0}м {1}с".format(m, s))
+    else:
+        await bot.say("Игра ещё не запущена")
+
 
 @bot.command()
 async def спорщики(*args: discord.Member):
@@ -56,12 +113,6 @@ async def отгадчики(*args: discord.Member):
             guessers += "**{}**, ".format(i.name)
     await bot.say('{0} в команде отгадчиков \nВсего в команде отгадчиков {1} игроков'.format(guessers[:-2],
                                                                                              len(guessers_list)))
-
-@bot.command()
-async def пауза():
-    """приостановить таймер"""
-    await bot.say()
-
 
 @bot.command()
 async def правила():
