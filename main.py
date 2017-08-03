@@ -1,11 +1,18 @@
 import discord
 from discord.ext import commands
 import GameTimer
+import random
+from copy import deepcopy
 
 import logging
 
 f = open(file="token.txt", mode="r")
 token = " ".join(f.readline().split())
+f.close()
+
+f = open(file="fallacies.txt", mode="r")
+fallacies = f.readlines()
+
 # ------------------------------------------------------------------------------
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -20,41 +27,65 @@ server = discord.Server
 # ------------------------------------------------------------------------------
 paused = False
 started = False
+debaters_list = []
+guessers_list = []
+
+
+async def end_game():
+    print("2Игра закончилась2")
+    global started
+    started = False
+    await bot.say("Игра закончилась")
 
 
 def end():
     print("Игра закончилась")
-    @bot.event
-    async def end_game():
-        print("2Игра закончилась2")
-        global started
-        started = False
-        await bot.say("Игра закончилась")
+    bot.loop.create_task(end_game())
 
-
-game_timer = GameTimer.RenewableTimer(1, end)
-
+game_timer = GameTimer.RenewableTimer(10, end)
 
 
 @bot.event
 async def on_ready():
+
     print('Logged in as')
     print(bot.user.name)
     print(bot.user.id)
-    #await client.send_message("fireman#1674", "content")
 
     print('------')
-
 
 @bot.command()
 async def старт():
     """Начать игру"""
+    bot.say()
     global game_timer
     global started
     global paused
-    # Если таймер не запущен и игра не на паузе
-    if not (game_timer.timer.isAlive() or paused):
-        game_timer = GameTimer.RenewableTimer(1, end)
+    global debaters_list
+    global guessers_list
+    global fallacies
+    global pack
+    global playesrs
+
+    # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
+    if not (game_timer.timer.isAlive() or paused) and len(debaters_list) > 1 and len(guessers_list) > 0:
+        game_timer = GameTimer.RenewableTimer(10, end)
+        playesrs = {}
+        pack = deepcopy(fallacies)
+        # Перемешаить колоду
+        random.shuffle(pack)
+        # Раздать карты спорщикам
+        for debater in debaters_list:
+            ch = await bot.start_private_message(debater)
+            i = 0
+            card_list = []
+            while i < 5:
+                card = pack.pop()
+                card_list.append(card)
+                await bot.send_message(ch, card)
+                i += 1
+            playesrs.update({debater: card_list})
+
         game_timer.start()
         await bot.say("Игра началась")
         started = True
@@ -69,6 +100,10 @@ async def старт():
     elif paused:
         game_timer.resume()
         await bot.say("Игра продолжается")
+    elif len(debaters_list) < 2:
+        await bot.say("Нужно указать как минимум 2 спорщиков")
+    elif len(guessers_list) < 1:
+        await bot.say("Нужно указать как минимум 1 отгкадчика")
 
 
 
@@ -93,24 +128,29 @@ async def пауза():
 @bot.command()
 async def спорщики(*args: discord.Member):
     """Спорщики"""
+    global debaters_list
     debaters_list=[]
+
     debaters = ""
     for i in args:
         if i.name not in debaters_list:
-            debaters_list.append(i.name)
+            debaters_list.append(i)
             debaters += "**{}**, ".format(i.name)
+
     await bot.say('{0} в команде спорщиков \nВсего в команде спорщиков {1} игроков'.format(debaters[:-2],
                                                                                            len(debaters_list)))
 
 @bot.command()
 async def отгадчики(*args: discord.Member):
     """Отгадчики"""
+    global guessers_list
     guessers_list=[]
     guessers = ""
     for i in args:
         if i.name not in guessers_list:
-            guessers_list.append(i.name)
+            guessers_list.append(i)
             guessers += "**{}**, ".format(i.name)
+    #global guessers_list
     await bot.say('{0} в команде отгадчиков \nВсего в команде отгадчиков {1} игроков'.format(guessers[:-2],
                                                                                              len(guessers_list)))
 
