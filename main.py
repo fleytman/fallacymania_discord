@@ -29,6 +29,7 @@ paused = False
 started = False
 debaters_list = []
 guessers_list = []
+discard = []
 
 
 async def end_game():
@@ -42,7 +43,7 @@ def end():
     print("Игра закончилась")
     bot.loop.create_task(end_game())
 
-game_timer = GameTimer.RenewableTimer(10, end)
+game_timer = GameTimer.RenewableTimer(120, end)
 
 
 @bot.event
@@ -65,12 +66,12 @@ async def старт():
     global guessers_list
     global fallacies
     global pack
-    global playesrs
+    global debater_cards
 
     # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
     if not (game_timer.timer.isAlive() or paused) and len(debaters_list) > 1 and len(guessers_list) > 0:
-        game_timer = GameTimer.RenewableTimer(10, end)
-        playesrs = {}
+        game_timer = GameTimer.RenewableTimer(120, end)
+        debater_cards = {}
         pack = deepcopy(fallacies)
         # Перемешаить колоду
         random.shuffle(pack)
@@ -84,7 +85,7 @@ async def старт():
                 card_list.append(card)
                 await bot.send_message(ch, card)
                 i += 1
-            playesrs.update({debater: card_list})
+            debater_cards.update({debater: card_list})
 
         game_timer.start()
         await bot.say("Игра началась")
@@ -153,6 +154,50 @@ async def отгадчики(*args: discord.Member):
     #global guessers_list
     await bot.say('{0} в команде отгадчиков \nВсего в команде отгадчиков {1} игроков'.format(guessers[:-2],
                                                                                              len(guessers_list)))
+
+@bot.command()
+async def софизм(sophism):
+    """"С помощью ?софзизм %номер_софизма% карта уходит в сброс, а спорщик, у которого сбросилась карта получает
+    новую """
+    global started
+    global paused
+    global debaters_list
+    global guessers_list
+    global fallacies
+    global pack
+    global debater_cards
+    global discard
+
+    if not started:
+        return await bot.say("Сначала следует начать игру")
+    if sophism.isdigit():
+        if len(fallacies) <= int(sophism):
+            return await bot.say("Номер карточки должен быть не больше {}".format(len(fallacies) - 1))
+
+        so = fallacies[int(sophism)]
+        check_card = False
+        for debater in debater_cards:
+            card_list = debater_cards.get(debater)
+            if card_list.count(so) > 0:
+                check_card = True
+                card_list.remove(so)
+                card = pack.pop()
+                card_list.append(card)
+                discard.append(card)
+                ch = await bot.start_private_message(debater)
+                await bot.send_message(ch, card)
+
+        if not check_card:
+            return await bot.say("Ни у одного из спорщиков нет карточки номер {}".format(sophism))
+
+        # Если колода закончилась, то сброшенные карты перемешиваются и становятся колодой
+        if not pack:
+            pack = deepcopy(discard)
+            random.shuffle(pack)
+            discard = []
+    else:
+        await bot.say("Команда ?софзизм должна принимать номер указанный на карточке с софизмом")
+
 
 @bot.command()
 async def правила():
