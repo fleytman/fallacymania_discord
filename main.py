@@ -63,7 +63,7 @@ async def end_game():
 def end():
     bot.loop.create_task(end_game())
 
-t = 4
+t = 1200
 game_timer = GameTimer.RenewableTimer(t, end)
 
 
