@@ -27,23 +27,44 @@ server = discord.Server
 # ------------------------------------------------------------------------------
 paused = False
 started = False
+channel = False
 debaters_list = []
 guessers_list = []
 discard = []
 
 
 async def end_game():
-    print("2Игра закончилась2")
     global started
+    global guesser_points
+    global channel
+
     started = False
-    await bot.say("Игра закончилась")
+
+    max_points = 0
+    winners = []
+    score = ""
+    for guesser in guesser_points:
+        score += "У отгадчика **{0}** {1} очков\n".format(guesser.name, guesser_points[guesser])
+        if guesser_points[guesser] > max_points:
+            max_points = guesser_points[guesser]
+            winner = guesser
+            winners = [winner.name]
+        elif guesser_points[guesser] == max_points:
+            winners.append(guesser.name)
+    await bot.send_message(channel, score)
+    if len(winners) < 2:
+        await bot.send_message(channel, "Победитель **{}**".format(winner.name))
+    elif len(winners) > 1:
+        await bot.send_message(channel, "Победители **{}**".format(", ".join(winners)))
+    print("Игра закончилась")
+    await bot.send_message(channel, "Игра закончилась")
 
 
 def end():
-    print("Игра закончилась")
     bot.loop.create_task(end_game())
 
-game_timer = GameTimer.RenewableTimer(120, end)
+t = 4
+game_timer = GameTimer.RenewableTimer(t, end)
 
 
 @bot.event
@@ -55,10 +76,18 @@ async def on_ready():
 
     print('------')
 
+
+@bot.command(pass_context = True)
+async def играть(msg):
+    """Введите "?играть тут" для того чтобы чат-бот понимал, в каком текстовом канале идёт игра"""
+    global channel
+    channel = msg.message.channel
+    await bot.send_message(channel, "Канал для игры установлен")
+
+
 @bot.command()
 async def старт():
     """Начать игру"""
-    bot.say()
     global game_timer
     global started
     global paused
@@ -67,10 +96,16 @@ async def старт():
     global fallacies
     global pack
     global debater_cards
+    global guesser_points
+    global guesser_attempts
+    global channel
+    global t
 
+    if not channel:
+        return await bot.say(""""Введите "**?играть тут**" в том текстовом канале, где будете играть""")
     # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
     if not (game_timer.timer.isAlive() or paused) and len(debaters_list) > 1 and len(guessers_list) > 0:
-        game_timer = GameTimer.RenewableTimer(120, end)
+        game_timer = GameTimer.RenewableTimer(t, end)
         debater_cards = {}
         pack = deepcopy(fallacies)
         # Перемешаить колоду
@@ -80,12 +115,36 @@ async def старт():
             ch = await bot.start_private_message(debater)
             i = 0
             card_list = []
+            cards = ""
             while i < 5:
                 card = pack.pop()
+                cards += card
                 card_list.append(card)
-                await bot.send_message(ch, card)
                 i += 1
+            await bot.send_message(ch, cards)
             debater_cards.update({debater: card_list})
+
+        guesser_points = {}
+        guesser_attempts = {}
+
+        # • если отгадчиков 1-2, каждый берёт по 15 карт попыток;
+        # • если отгадчиков 3-4, каждый берёт по 10 карт попыток;
+        # • если отгадчиков 5-6, каждый берёт по 8 карт попыток;
+        # • если отгадчиков больше 6, то 50 карт попыток делятся поровну между отгадчиками, а остаток убирается обратно
+        #  в коробку.
+        if len(guessers_list) < 3:
+            number_attempts = 15
+        elif len(guessers_list) < 5:
+            number_attempts = 10
+        elif len(guessers_list) < 7:
+            number_attempts = 8
+        elif len(guessers_list) > 6:
+            number_attempts = int(50 / len(guessers_list))
+
+        # Установить начальные очки и попытки отгадчиков
+        for guesser in guessers_list:
+            guesser_points.update({guesser: 0})
+            guesser_attempts.update({guesser: number_attempts})
 
         game_timer.start()
         await bot.say("Игра началась")
@@ -131,7 +190,6 @@ async def спорщики(*args: discord.Member):
     """Спорщики"""
     global debaters_list
     debaters_list=[]
-
     debaters = ""
     for i in args:
         if i.name not in debaters_list:
@@ -151,9 +209,9 @@ async def отгадчики(*args: discord.Member):
         if i.name not in guessers_list:
             guessers_list.append(i)
             guessers += "**{}**, ".format(i.name)
-    #global guessers_list
     await bot.say('{0} в команде отгадчиков \nВсего в команде отгадчиков {1} игроков'.format(guessers[:-2],
                                                                                              len(guessers_list)))
+
 
 @bot.command()
 async def софизм(sophism):
@@ -200,11 +258,55 @@ async def софизм(sophism):
 
 
 @bot.command()
+async def очко(point, member: discord.Member):
+    """С помощью ?очко +/- %отгадчик% присваевается или убавляется очко у игрока"""
+    global guessers_list
+    global guesser_points
+
+    if member not in guesser_points:
+        return await bot.say("""После ?очко должен быть знак "-" или "+", без кавычек, а потом имя отгадчика, например: 
+        "?очко + @Катя" """)
+
+    if point == "+":
+        guesser_points[member] = guesser_points[member] + 1
+    elif point == "-":
+        guesser_points[member] = guesser_points[member] - 1
+    else:
+        return await bot.say("""После ?очко должен быть знак "-" или "+", без кавычек, а потом имя отгадчика, например: 
+        "?попытка + @Катя" """)
+    await bot.say("У игрока **{0}** {1} очков".format(member.name, guesser_points[member]))
+
+
+@bot.command()
+async def попытка(attempt, member: discord.Member):
+    """С помощью ?попытка +/- %отгадчик% присваевается или убавляется попытка у игрока"""
+    global guessers_list
+    global guesser_attempts
+    global guesser_points
+
+    if member not in guesser_attempts:
+        return await bot.say("""После ?попытка должен быть знак "-" или "+", без кавычек, а потом имя отгадчика, например: 
+        "?попытка + @Катя" """)
+
+    if attempt == "+":
+        guesser_attempts[member] = guesser_attempts[member] + 1
+    elif attempt == "-":
+        if guesser_attempts[member] < 1:
+            guesser_points[member] = guesser_points[member] - 1
+            return await bot.say("У игрока **{0}** {1} очков".format(member.name, guesser_points[member]))
+        guesser_attempts[member] = guesser_attempts[member] - 1
+    else:
+        return await bot.say("""После ?попытка должен быть знак "-" или "+", без кавычек, а потом имя отгадчика, например: 
+        "?попытка + @Катя" """)
+    await bot.say("У игрока **{0}** осталось {1} попыток".format(member.name, guesser_attempts[member]))
+
+
+@bot.command()
 async def правила():
     """Показать правила игры"""
     await bot.say('''
     **Fallacymania — правила игры**
-    Оригинальные правила - http://gdurl.com/z6s0A/download
+        Оригинальные правила - http://gdurl.com/z6s0A/download
 
     Для игры нужно 3–20 игроков (рекомендуется 4–12). Игроки разбиваются на 2 группы: спорщики (2–10 игроков) и отгадчики (1–10 игроков). Ведущий может играть в любой из этих ролей.
 
