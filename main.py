@@ -52,10 +52,14 @@ async def end_game():
         elif guesser_points[guesser] == max_points:
             winners.append(guesser.name)
     await bot.send_message(channel, score)
-    if len(winners) < 2:
+
+    if len(guesser_points) < 2:
+        await bot.send_message(channel, "Победитель **{}**".format(guesser.name))
+    elif len(winners) < 2:
         await bot.send_message(channel, "Победитель **{}**".format(winner.name))
     elif len(winners) > 1:
         await bot.send_message(channel, "Победители **{}**".format(", ".join(winners)))
+
     print("Игра закончилась")
     await bot.send_message(channel, "Игра закончилась")
 
@@ -63,7 +67,7 @@ async def end_game():
 def end():
     bot.loop.create_task(end_game())
 
-t = 1200
+t = 5
 game_timer = GameTimer.RenewableTimer(t, end)
 
 
