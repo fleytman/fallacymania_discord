@@ -196,10 +196,10 @@ async def пауза():
 async def спорщики(*args: discord.Member):
     """Спорщики"""
     global debaters_list
-    debaters_list=[]
+    debaters_list = []
     debaters = ""
     for i in args:
-        if i.name not in debaters_list:
+        if i not in debaters_list:
             debaters_list.append(i)
             debaters += "**{}**, ".format(i.name)
 
@@ -210,10 +210,10 @@ async def спорщики(*args: discord.Member):
 async def отгадчики(*args: discord.Member):
     """Отгадчики"""
     global guessers_list
-    guessers_list=[]
+    guessers_list = []
     guessers = ""
     for i in args:
-        if i.name not in guessers_list:
+        if i not in guessers_list:
             guessers_list.append(i)
             guessers += "**{}**, ".format(i.name)
     await bot.say('{0} в команде отгадчиков \nВсего в команде отгадчиков {1} игроков'.format(guessers[:-2],
