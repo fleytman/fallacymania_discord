@@ -141,8 +141,11 @@ async def старт():
         elif len(guessers_list) > 6:
             number_attempts = int(50 / len(guessers_list))
 
-        # Установить начальные очки и попытки отгадчиков
         for guesser in guessers_list:
+            # Раздать лист с софизмами отгадчикам
+            ch = await bot.start_private_message(guesser)
+            await bot.send_message(ch, "http://i.imgur.com/YhxwU5M.png")
+            # Установить начальное количество попыток и очков для отгадчиков
             guesser_points.update({guesser: 0})
             guesser_attempts.update({guesser: number_attempts})
 
