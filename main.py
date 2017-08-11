@@ -21,7 +21,6 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 # ------------------------------------------------------------------------------
 description = '''Чат-бот для игры в fallacymania'''
-bot = commands.Bot(command_prefix='?', description=description)
 client = discord.Client()
 server = discord.Server
 # ------------------------------------------------------------------------------
@@ -29,7 +28,11 @@ paused = False
 started = False
 channel = False
 debaters_list = []
+debater_names = []
+guesser_attempts = []
 guessers_list = []
+guesser_names = []
+guesser_points = []
 discard = []
 
 
@@ -51,297 +54,265 @@ async def end_game():
             winners = [winner.name]
         elif guesser_points[guesser] == max_points:
             winners.append(guesser.name)
-    await bot.send_message(channel, score)
+    await client.send_message(channel, score)
 
     if len(guesser_points) < 2:
-        await bot.send_message(channel, "Победитель **{}**".format(guesser.name))
+        await client.send_message(channel, "Победитель **{}**".format(guesser.name))
     elif len(winners) < 2:
-        await bot.send_message(channel, "Победитель **{}**".format(winner.name))
+        await client.send_message(channel, "Победитель **{}**".format(winner.name))
     elif len(winners) > 1:
-        await bot.send_message(channel, "Победители **{}**".format(", ".join(winners)))
+        await client.send_message(channel, "Победители **{}**".format(", ".join(winners)))
 
     print("Игра закончилась")
-    await bot.send_message(channel, "Игра закончилась")
+    await client.send_message(channel, "Игра закончилась")
 
 
 def end():
-    bot.loop.create_task(end_game())
+    client.loop.create_task(end_game())
 
 t = 1200
 game_timer = GameTimer.RenewableTimer(t, end)
 
 
-@bot.event
+@client.event
 async def on_ready():
 
     print('Logged in as')
-    print(bot.user.name)
-    print(bot.user.id)
+    print(client.user.name)
+    print(client.user.id)
 
     print('------')
 
 
-@bot.command(pass_context = True)
-async def играть(msg):
-    """Введите "?играть тут" для того чтобы чат-бот понимал, в каком текстовом канале идёт игра"""
-    global channel
-    channel = msg.message.channel
-    await bot.send_message(channel, "Канал для игры установлен")
-
-
-@bot.command()
-async def старт():
-    """Начать игру"""
+@client.event
+async def on_message(message):
     global game_timer
     global started
     global paused
     global debaters_list
+    global debaters
     global guessers_list
+    global guessers
     global fallacies
     global pack
     global debater_cards
     global guesser_points
     global guesser_attempts
-    global channel
+    # global channel
     global t
 
-    if not channel:
-        return await bot.say(""""Введите "**?играть тут**" в том текстовом канале, где будете играть""")
-    # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
-    if not (game_timer.timer.isAlive() or paused) and len(debaters_list) > 1 and len(guessers_list) > 0:
-        game_timer = GameTimer.RenewableTimer(t, end)
-        debater_cards = {}
-        pack = deepcopy(fallacies)
-        # Перемешаить колоду
-        random.shuffle(pack)
-        # Раздать карты спорщикам
-        for debater in debaters_list:
-            ch = await bot.start_private_message(debater)
-            i = 0
-            card_list = []
-            cards = ""
-            while i < 5:
-                card = pack.pop()
-                cards += card
-                card_list.append(card)
-                i += 1
-            await bot.send_message(ch, cards)
-            debater_cards.update({debater: card_list})
+    member = message.author
+    channel = message.channel
 
-        guesser_points = {}
-        guesser_attempts = {}
+    # we do not want the client to reply to itself
+    if member == client.user:
+        return
 
-        # • если отгадчиков 1-2, каждый берёт по 15 карт попыток;
-        # • если отгадчиков 3-4, каждый берёт по 10 карт попыток;
-        # • если отгадчиков 5-6, каждый берёт по 8 карт попыток;
-        # • если отгадчиков больше 6, то 50 карт попыток делятся поровну между отгадчиками, а остаток убирается обратно
-        #  в коробку.
-        if len(guessers_list) < 3:
-            number_attempts = 15
-        elif len(guessers_list) < 5:
-            number_attempts = 10
-        elif len(guessers_list) < 7:
-            number_attempts = 8
-        elif len(guessers_list) > 6:
-            number_attempts = int(50 / len(guessers_list))
+    if message.content == "!спорщик":
+        ch = await client.start_private_message(member)
+        if member not in debaters_list:
+            debaters_list.append(member)
+            debater_names.append(member.name)
+            debaters = "**"+"**, **".join(debater_names) + "**"
 
-        for guesser in guessers_list:
-            # Раздать лист с софизмами отгадчикам
-            ch = await bot.start_private_message(guesser)
-            await bot.send_message(ch, "http://i.imgur.com/YhxwU5M.png")
-            # Установить начальное количество попыток и очков для отгадчиков
-            guesser_points.update({guesser: 0})
-            guesser_attempts.update({guesser: number_attempts})
-
-        game_timer.start()
-        await bot.say("Игра началась")
-        started = True
-    # Если таймер запущен
-    elif game_timer.timer.isAlive():
-        await bot.say("Таймер уже запущен")
-        game_timer.pause()
-        s = int(game_timer.get_actual_time())
-        m = int(s/60)
-        await bot.say("Осталось {0}м {1}с".format(m, s))
-        game_timer.resume()
-    elif paused:
-        game_timer.resume()
-        await bot.say("Игра продолжается")
-    elif len(debaters_list) < 2:
-        await bot.say("Нужно указать как минимум 2 спорщиков")
-    elif len(guessers_list) < 1:
-        await bot.say("Нужно указать как минимум 1 отгкадчика")
-
-
-
-@bot.command()
-async def пауза():
-    """приостановить таймер"""
-    global game_timer
-    global paused
-    global started
-    if started:
-        game_timer.pause()
-        game_timer.get_actual_time()
-        paused = True
-        await bot.say("Пауза")
-        s = int(game_timer.get_actual_time())
-        m = int(s/60)
-        await bot.say("Осталось {0}м {1}с".format(m, s))
-    else:
-        await bot.say("Игра ещё не запущена")
-
-
-@bot.command()
-async def спорщики(*args: discord.Member):
-    """Спорщики"""
-    global debaters_list
-    debaters_list = []
-    debaters = ""
-    for i in args:
-        if i not in debaters_list:
-            debaters_list.append(i)
-            debaters += "**{}**, ".format(i.name)
-
-    await bot.say('{0} в команде спорщиков \nВсего в команде спорщиков {1} игроков'.format(debaters[:-2],
+            for debater in debaters_list:
+                ch = await client.start_private_message(debater)
+                if debater != member:
+                    await client.send_message(ch,
+                                              "Игрок {0} добавлен в группу спорщиков\n"
+                                              "Группа спорщиков: {1}\n"
+                                              "Общее количество спорщиков: **{2}**".format(debater.name, debaters,
                                                                                            len(debaters_list)))
+                else:
+                    await client.send_message(ch,
+                                              "Вы добавлены в группу спорщиков\n"
+                                              "Группа спорщиков: {1}\n"
+                                              "Общее количество спорщиков: **{2}**".format(debater.name, debaters,
+                                                                                           len(debaters_list)))
+        elif member in debaters_list:
+            await client.send_message(ch,
+                                      'Вы уже в группе спорщиков \nГруппа спорщиков: {0}\nОбщее количество '
+                                      'спорщиков: **{1}**'.format(debaters, len(debaters_list)))
+        if member in guessers_list:
+            guessers_list.remove(member)
+            guesser_names.remove(member.name)
+            guessers = "**"+"**, **".join(guesser_names) + "**"
+            ch = await client.start_private_message(member)
+            await client.send_message(ch,
+                                      "Вы удалены из группы олтгадчиков\n"
+                                      "Группа отгадчиков: {0}\n"
+                                      "Общее количество отгадчиков: **{1}**".format(guessers, len(guessers_list)))
+            for guesser in guessers_list:
+                ch = await client.start_private_message(guesser)
+                await client.send_message(ch,
+                                          "Игрок {0} удалён из группы олтгадчиков\n"
+                                          "Группа отгадчиков: {1}\n"
+                                          "Общее количество отгадчиков: **{2}**".format(member.name, guessers, len(guessers_list)))
 
-@bot.command()
-async def отгадчики(*args: discord.Member):
-    """Отгадчики"""
-    global guessers_list
-    guessers_list = []
-    guessers = ""
-    for i in args:
-        if i not in guessers_list:
-            guessers_list.append(i)
-            guessers += "**{}**, ".format(i.name)
-    await bot.say('{0} в команде отгадчиков \nВсего в команде отгадчиков {1} игроков'.format(guessers[:-2],
-                                                                                             len(guessers_list)))
+    if message.content == "!отгадчик":
+        ch = await client.start_private_message(member)
+        if member not in guessers_list:
+            guessers_list.append(member)
+            guesser_names.append(member.name)
+            guessers = "**"+"**, **".join(guesser_names) + "**"
 
-
-@bot.command()
-async def софизм(sophism):
-    """"С помощью ?софзизм %номер_софизма% карта уходит в сброс, а спорщик, у которого сбросилась карта получает
-    новую """
-    global started
-    global paused
-    global debaters_list
-    global guessers_list
-    global fallacies
-    global pack
-    global debater_cards
-    global discard
-
-    if not started:
-        return await bot.say("Сначала следует начать игру")
-    if sophism.isdigit():
-        if len(fallacies) <= int(sophism):
-            return await bot.say("Номер карточки должен быть не больше {}".format(len(fallacies) - 1))
-
-        so = fallacies[int(sophism)]
-        check_card = False
-        for debater in debater_cards:
-            card_list = debater_cards.get(debater)
-            if card_list.count(so) > 0:
-                check_card = True
-                card_list.remove(so)
-                card = pack.pop()
-                card_list.append(card)
-                discard.append(card)
-                ch = await bot.start_private_message(debater)
-                await bot.send_message(ch, card)
-
-        if not check_card:
-            return await bot.say("Ни у одного из спорщиков нет карточки номер {}".format(sophism))
-
-        # Если колода закончилась, то сброшенные карты перемешиваются и становятся колодой
-        if not pack:
-            pack = deepcopy(discard)
+            for guesser in guessers_list:
+                ch = await client.start_private_message(guesser)
+                if guesser != member:
+                    await client.send_message(ch,
+                                              "Игрок {0} добавлен в группу отгадчиков\n"
+                                              "Группа отгадчиков: {1}\n"
+                                              "Общее количество отгадчиков: **{2}**".format(guesser.name, guessers,
+                                                                                           len(guessers_list)))
+                else:
+                    await client.send_message(ch,
+                                              "Вы добавлены в группу отгадчиков\n"
+                                              "Группа отгадчиков: {1}\n"
+                                              "Общее количество отгадчиков: **{2}**".format(guesser.name, guessers,
+                                                                                           len(guessers_list)))
+        elif member in guessers_list:
+            await client.send_message(ch,
+                                      'Вы уже в группе отгадчиков \nГруппа отгадчиков: {0}\nОбщее количество '
+                                      'отгадчиков: **{1}**'.format(guessers, len(guessers_list)))
+        if member in debaters_list:
+            debaters_list.remove(member)
+            debater_names.remove(member.name)
+            debaters = "**"+"**, **".join(debater_names) + "**"
+            ch = await client.start_private_message(member)
+            await client.send_message(ch,
+                                      "Вы удалены из группы спорщиков\n"
+                                      "Группа спорщиков: {0}\n"
+                                      "Общее количество спорщиков: **{1}**".format(debaters, len(debaters_list)))
+            for debater in debaters_list:
+                ch = await client.start_private_message(debater)
+                await client.send_message(ch,
+                                          "Игрок {0} удалён из группы спорщиков\n"
+                                          "Группа отгадчиков: {1}\n"
+                                          "Общее количество спорщиков: **{2}**".format(member.name, debaters, len(debaters_list)))
+    # Старт игры
+    if message.content == '!s':
+        # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
+        if not (game_timer.timer.isAlive() or paused) and len(debaters_list) > 1 and len(guessers_list) > 0:
+            game_timer = GameTimer.RenewableTimer(t, end)
+            debater_cards = {}
+            pack = deepcopy(fallacies)
+            # Перемешаить колоду
             random.shuffle(pack)
-            discard = []
-    else:
-        await bot.say("Команда ?софзизм должна принимать номер указанный на карточке с софизмом")
+            # Раздать карты спорщикам
+            for debater in debaters_list:
+                ch = await client.start_private_message(debater)
+                i = 0
+                card_list = []
+                cards = ""
+                while i < 5:
+                    card = pack.pop()
+                    cards += card
+                    card_list.append(card)
+                    i += 1
+                await client.send_message(ch, cards)
+                debater_cards.update({debater: card_list})
 
+            guesser_points = {}
+            guesser_attempts = {}
 
-@bot.command()
-async def очко(point, member: discord.Member):
-    """С помощью ?очко +/- %отгадчик% присваевается или убавляется очко у игрока"""
-    global guessers_list
-    global guesser_points
+            # • если отгадчиков 1-2, каждый берёт по 15 карт попыток;
+            # • если отгадчиков 3-4, каждый берёт по 10 карт попыток;
+            # • если отгадчиков 5-6, каждый берёт по 8 карт попыток;
+            # • если отгадчиков больше 6, то 50 карт попыток делятся поровну между отгадчиками, а остаток убирается обратно
+            #  в коробку.
+            if len(guessers_list) < 3:
+                number_attempts = 15
+            elif len(guessers_list) < 5:
+                number_attempts = 10
+            elif len(guessers_list) < 7:
+                number_attempts = 8
+            elif len(guessers_list) > 6:
+                number_attempts = int(50 / len(guessers_list))
 
-    if member not in guesser_points:
-        return await bot.say("""После ?очко должен быть знак "-" или "+", без кавычек, а потом имя отгадчика, например: 
-        "?очко + @Катя" """)
+            for guesser in guessers_list:
+                # Раздать лист с софизмами отгадчикам
+                ch = await client.start_private_message(guesser)
+                await client.send_message(ch, "http://i.imgur.com/YhxwU5M.png")
+                # Установить начальное количество попыток и очков для отгадчиков
+                guesser_points.update({guesser: 0})
+                guesser_attempts.update({guesser: number_attempts})
 
-    if point == "+":
-        guesser_points[member] = guesser_points[member] + 1
-    elif point == "-":
-        guesser_points[member] = guesser_points[member] - 1
-    else:
-        return await bot.say("""После ?очко должен быть знак "-" или "+", без кавычек, а потом имя отгадчика, например: 
-        "?попытка + @Катя" """)
-    await bot.say("У игрока **{0}** {1} очков".format(member.name, guesser_points[member]))
+            game_timer.start()
+            await client.send_message(channel, "Игра началась")
+            started = True
+        # Если таймер запущен
+        elif game_timer.timer.isAlive():
+            await client.send_message(channel, "Таймер уже запущен")
+            game_timer.pause()
+            s = int(game_timer.get_actual_time())
+            m = int(s/60)
+            await client.send_message(channel, "Осталось {0}м {1}с".format(m, s))
+            game_timer.resume()
+        elif paused:
+            game_timer.resume()
+            await client.send_message(channel, "Игра продолжается")
+        elif len(debaters_list) < 2:
+            await client.send_message(channel, "Нужно указать как минимум 2 спорщиков")
+        elif len(guessers_list) < 1:
+            await client.send_message(channel, "Нужно указать как минимум 1 отгкадчика")
 
+    # Начиление очков
+    if message.content == '+' or message.content == '-':
+        if member not in guesser_points:
+            ch = await client.start_private_message(member)
+            return await client.send_message(ch, """'+' или '-' отправленное отгадчиком даёт или отнимает очко у 
+            этого отгадчика. **{0}** - не отгадчик""".format(member))
 
-@bot.command()
-async def попытка(attempt, member: discord.Member):
-    """С помощью ?попытка +/- %отгадчик% присваевается или убавляется попытка у игрока"""
-    global guessers_list
-    global guesser_attempts
-    global guesser_points
-
-    if member not in guesser_attempts:
-        return await bot.say("""После ?попытка должен быть знак "-" или "+", без кавычек, а потом имя отгадчика, например: 
-        "?попытка + @Катя" """)
-
-    if attempt == "+":
-        guesser_attempts[member] = guesser_attempts[member] + 1
-    elif attempt == "-":
-        if guesser_attempts[member] < 1:
+        if message.content == "+":
+            guesser_points[member] = guesser_points[member] + 1
+            msg = "Игрок **{0}** получил 1 очко.".format(member.name)
+        elif message.content == "-":
             guesser_points[member] = guesser_points[member] - 1
-            return await bot.say("У игрока **{0}** {1} очков".format(member.name, guesser_points[member]))
-        guesser_attempts[member] = guesser_attempts[member] - 1
-    else:
-        return await bot.say("""После ?попытка должен быть знак "-" или "+", без кавычек, а потом имя отгадчика, например: 
-        "?попытка + @Катя" """)
-    await bot.say("У игрока **{0}** осталось {1} попыток".format(member.name, guesser_attempts[member]))
+            msg = "Игрок **{0}** потерял 1 очко.".format(member.name)
+
+        for guesser in guesser_points:
+            ch = await client.start_private_message(guesser)
+            await client.send_message(ch, "{0} {1}".format(msg, current_score(guesser_points, guesser_attempts)))
+
+    # Начисление попыток
+    if message.content == '.+' or message.content == '.-':
+        if member not in guesser_points:
+            ch = await client.start_private_message(member)
+            return await client.send_message(ch, """'.+' или '.-' отправленное отгадчиком даёт или отнимает попытку у 
+                    этого отгадчика. **{0}** - не отгадчик""".format(member))
+
+        if message.content == ".+":
+            guesser_attempts[member] = guesser_attempts[member] + 1
+            msg = "Игрок **{0}** получил 1 попытку.".format(member.name)
+        elif message.content == ".-":
+            if guesser_attempts[member] < 1:
+                guesser_points[member] = guesser_points[member] - 1
+                msg = "Попыток у игрока **{0}** нет, он потеряет 1 очко.".format(member.name)
+            guesser_attempts[member] = guesser_attempts[member] - 1
+            msg = "Игрок **{0}** потерял 1 попытку.".format(member.name)
+
+        for guesser in guesser_points:
+            ch = await client.start_private_message(guesser)
+            await client.send_message(ch, "{0} {1}".format(msg, current_score(guesser_points, guesser_attempts)))
+
+    if message.content.isdigit() and len(message.content) < 2:
+        pass
 
 
-@bot.command()
-async def правила():
-    """Показать правила игры"""
-    await bot.say('''
-    **Fallacymania — правила игры**
-        Оригинальные правила - http://gdurl.com/z6s0A/download
+    if message.content[:1] == "!":
+        if message.content[1:] == "!":
+            msg = 'Hello {0.author.mention}'.format(message)
+            await client.send_message(message.channel, msg)
+    if message.content.startswith('!!'):
+        msg = '! {0.author.mention}'.format(message)
+        await client.send_message(message.channel, msg)
 
-    Для игры нужно 3–20 игроков (рекомендуется 4–12). Игроки разбиваются на 2 группы: спорщики (2–10 игроков) и отгадчики (1–10 игроков). Ведущий может играть в любой из этих ролей.
 
-**Подготовка к игре**
-    Некоторые (или все) спорщики определяют для себя тезисы, которые они будут отстаивать с использованием софизмов.
-    Задача спорщиков — проталкивать собственные тезисы, а также комментировать (поддерживать или опровергать) сказанное другими спорщиками, но с использованием софизмов со своих карт
-    Примеры тезисов:
-        Инопланетных цивилизаций не существует;
-        Никого невозможно в чём-то убедить при помощи софизмов;
-        Зелёный цвет красивее, чем красный.
-    Спорщики могут объединяться в группы, когда несколько человек отстаивают один и тот же тезис. Те спорщики, которые не взяли себе никакой тезис, используют софизмы только для ответов на сказанное другими.
-''')
+def current_score(guesser_points, guesser_attempts):
+    msg = "Общий счёт (Игрок: очки | попытки):\n"
+    for guesser in guesser_points:
+        msg += "**{0}**: {1} | {2} \n".format(guesser.name, guesser_points[guesser], guesser_attempts[guesser])
+    return msg
 
-    await bot.say('''**Ход игры**
-    1. Игра идёт в реальном времени. Спорщики говорят фразы в поддержку своего тезиса, а также поддерживают или опровергают тезисы других спорщиков.
-    Но всё это должно делаться с использованием софизмов, которые есть у спорщиков на картах.
-    2. У спорщиков нет условий победы и поражения; их цель — попрактиковаться использовать софизмы так, чтобы аргументы звучали убедительно.
-    3. Спорщики могут говорить в любом порядке; могут как отвечать на реплики других игроков, так и высказывать новые суждения относительно своего тезиса.
-    4. Отгадчики смотрят дебаты и пытаются угадать, какие софизмы используют спорщики. Отгадчики соревнуются между собой, кто наберёт больше очков за угаданные софизмы.
-    5. Любой из отгадчиков может в любой момент пытаться угадывать софизмы, которые используют спорщики. Для этого отгадчик громко говорит имя спорщика и название софизма, который, как ему кажется, употребил этот спорщик. Спорщик отвечает отгадчику, правильная была догадка или нет.
-    6. Отгадчик может пытаться угадать софизмы __только из последней реплики__, сказанной спорщиком.
-    Если спорщик уже начал говорить следующую реплику, предыдущие софизмы угадывать нельзя. Тем не менее, можно пытаться угадать последние сказанные софизмы других спорщиков, пока они не начали говорить.
-''')
-    await bot.say('''
-    7. Спорщик может использовать в одной реплике несколько софизмов одновременно из тех, которые есть у него на картах. Отгадчики тоже могут пытаться найти несколько софизмов в одной реплике спорщика.
-    8. За каждый угаданный софизм отгадчик получает __1 очко__ , а спорщик откладывает угаданную карту софизма в сброс и берёт себе новую из колоды. Если колода заканчивается, то сброс перетасовывается и становится новой колодой.
-    9. Спорщик больше не может использовать тот софизм, который ушёл в сброс, но может пользоваться новым полученным софизмом.
-    10. Если отгадчик называет не тот софизм, который использовал спорщик, то он теряет 1 карту попытки . Когда карты попыток у отгадчика заканчиваются, __он начинает терять по 1 очку__ за каждую неправильную попытку.
-    11. Игра продолжается __20 минут__. В конце игры среди отгадчиков определяется победитель по количеству набранных очков.''')
 
-bot.run(token)
+client.run(token)
