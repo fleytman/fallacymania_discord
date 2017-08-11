@@ -108,6 +108,29 @@ async def on_message(message):
     if member == client.user:
         return
 
+    if message.content == "!help" or message.content == "!h":
+        ch = await client.start_private_message(member)
+        await client.send_message(ch, """```Чат-бот для игры в Fallacymania
+        
+Команды:
+
+"!help" или "!h" - Выводит данную справку
+
+"!r" - выводит правила
+
+"!d" - Добавляет пользователя в группу спорщиков
+
+"!g" - Добавляет пользователя в группу отгадчиков
+
+"!s" - если указанно минимальное количество отгадчиков и спорщиков, то запускает таймер игры
+
+"%номер_софизма%" - ищет у спорщика софизм по номеру, если находит, то забирает и даёт новый
+
+"+" или "-"  - дать или забрать очко у отгадчика
+
+".+" или ".-" - дать или забрать попытку у отгадчика
+```""")
+
     if message.content == "!d":
         ch = await client.start_private_message(member)
         if member not in debaters_list:
