@@ -108,7 +108,7 @@ async def on_message(message):
     if member == client.user:
         return
 
-    if message.content == "!спорщик":
+    if message.content == "!d":
         ch = await client.start_private_message(member)
         if member not in debaters_list:
             debaters_list.append(member)
@@ -149,7 +149,7 @@ async def on_message(message):
                                           "Группа отгадчиков: {1}\n"
                                           "Общее количество отгадчиков: **{2}**".format(member.name, guessers, len(guessers_list)))
 
-    if message.content == "!отгадчик":
+    if message.content == "!g":
         ch = await client.start_private_message(member)
         if member not in guessers_list:
             guessers_list.append(member)
