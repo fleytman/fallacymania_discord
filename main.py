@@ -116,13 +116,13 @@ async def on_message(message):
 
 "!help" или "!h" - Выводит данную справку
 
-"!r" - выводит правила
+"!r" или "!правила" - выводит правила
 
-"!d" - Добавляет пользователя в группу спорщиков
+"!d" или "!спорщик" - Добавляет пользователя в группу спорщиков
 
-"!g" - Добавляет пользователя в группу отгадчиков
+"!g" или "!отгадчик" - Добавляет пользователя в группу отгадчиков
 
-"!s" - если указанно минимальное количество отгадчиков и спорщиков, то запускает таймер игры
+"!s" или "!старт! - если указанно минимальное количество отгадчиков и спорщиков, то запускает таймер игры
 
 "%номер_софизма%" - ищет у спорщика софизм по номеру, если находит, то забирает и даёт новый
 
@@ -131,7 +131,7 @@ async def on_message(message):
 ".+" или ".-" - дать или забрать попытку у отгадчика
 ```""")
 
-    if message.content == "!d":
+    if message.content == "!d" or  message.content == "!спорщик":
         ch = await client.start_private_message(member)
         if member not in debaters_list:
             debaters_list.append(member)
@@ -172,7 +172,7 @@ async def on_message(message):
                                           "Группа отгадчиков: {1}\n"
                                           "Общее количество отгадчиков: **{2}**".format(member.name, guessers, len(guessers_list)))
 
-    if message.content == "!g":
+    if message.content == "!g" or message.content == "!отгадчик":
         ch = await client.start_private_message(member)
         if member not in guessers_list:
             guessers_list.append(member)
@@ -213,7 +213,7 @@ async def on_message(message):
                                           "Группа отгадчиков: {1}\n"
                                           "Общее количество спорщиков: **{2}**".format(member.name, debaters, len(debaters_list)))
     # Старт игры
-    if message.content == '!s':
+    if message.content == '!s' or message.content == '!старт':
         # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
         if not (game_timer.timer.isAlive() or paused) and len(debaters_list) > 1 and len(guessers_list) > 0:
             game_timer = GameTimer.RenewableTimer(t, end)
@@ -279,6 +279,22 @@ async def on_message(message):
         elif len(guessers_list) < 1:
             await client.send_message(channel, "Нужно указать как минимум 1 отгкадчика")
 
+    # Пауза
+    if message.content == '!p' or message.content == '!пауза':
+        if started and not paused:
+            game_timer.pause()
+            game_timer.get_actual_time()
+            paused = True
+            await client.send_message(channel, "Пауза")
+            s = int(game_timer.get_actual_time())
+            m = int(s/60)
+            await client.send_message(channel, "Осталось {0}м {1}с".format(m, s))
+        elif not started:
+            await client.send_message(channel, "Игра ещё не запущена")
+        elif paused:
+            await client.send_message(channel, "Игра уже на паузе")
+
+
     # Начиление очков
     if message.content == '+' or message.content == '-':
         if member not in guesser_points:
@@ -321,7 +337,7 @@ async def on_message(message):
     if message.content.isdigit() and len(message.content) < 2:
         pass
 
-    if message.content == '!r':
+    if message.content == '!r' or "!правила":
         """Показать правила игры"""
         ch = await client.start_private_message(member)
         await client.send_message(ch, '''
