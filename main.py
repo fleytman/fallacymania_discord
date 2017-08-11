@@ -39,32 +39,34 @@ discard = []
 async def end_game():
     global started
     global guesser_points
-    global channel
+    # global channel
 
     started = False
 
     max_points = 0
     winners = []
-    score = ""
+    # Определяет отгадчика с максимальным количеством очков
     for guesser in guesser_points:
-        score += "У отгадчика **{0}** {1} очков\n".format(guesser.name, guesser_points[guesser])
         if guesser_points[guesser] > max_points:
             max_points = guesser_points[guesser]
             winner = guesser
             winners = [winner.name]
         elif guesser_points[guesser] == max_points:
             winners.append(guesser.name)
-    await client.send_message(channel, score)
 
     if len(guesser_points) < 2:
-        await client.send_message(channel, "Победитель **{}**".format(guesser.name))
+        msg = "Победитель **{}**".format(guesser.name)
     elif len(winners) < 2:
-        await client.send_message(channel, "Победитель **{}**".format(winner.name))
+        msg = "Победитель **{}**".format(winner.name)
     elif len(winners) > 1:
-        await client.send_message(channel, "Победители **{}**".format(", ".join(winners)))
+        msg = "Победители **{}**".format("**" + "**, **".join(winners) + "**")
 
+    score = current_score(guesser_points, guesser_attempts)
+
+    for user in guessers_list + debaters_list:
+        ch = await client.start_private_message(user)
+        await client.send_message(ch, "{0}\n{1}\nИгра закончилась".format(score, msg))
     print("Игра закончилась")
-    await client.send_message(channel, "Игра закончилась")
 
 
 def end():
@@ -241,8 +243,8 @@ async def on_message(message):
             # • если отгадчиков 1-2, каждый берёт по 15 карт попыток;
             # • если отгадчиков 3-4, каждый берёт по 10 карт попыток;
             # • если отгадчиков 5-6, каждый берёт по 8 карт попыток;
-            # • если отгадчиков больше 6, то 50 карт попыток делятся поровну между отгадчиками, а остаток убирается обратно
-            #  в коробку.
+            # • если отгадчиков больше 6, то 50 карт попыток делятся поровну между отгадчиками,
+            # а остаток убирается обратно в коробку.
             if len(guessers_list) < 3:
                 number_attempts = 15
             elif len(guessers_list) < 5:
@@ -340,6 +342,7 @@ async def on_message(message):
     if message.content == '!r' or "!правила":
         """Показать правила игры"""
         ch = await client.start_private_message(member)
+        # Разделено на 3 сообщения, из-за лимита на количество символов в discord
         await client.send_message(ch, '''
             **Fallacymania — правила игры**
 Оригинальные правила - http://gdurl.com/z6s0A/download
