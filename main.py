@@ -1,5 +1,4 @@
 ﻿import discord
-from discord.ext import commands
 import GameTimer
 import random
 from copy import deepcopy
@@ -86,6 +85,97 @@ async def on_ready():
     print('------')
 
 
+async def add_guesser(member, guessers_list):
+    ch = await client.start_private_message(member)
+    if member not in guessers_list:
+        guessers_list.append(member)
+        guesser_names.append(member.name)
+        guessers = "**" + "**, **".join(guesser_names) + "**"
+
+        for guesser in guessers_list:
+            ch = await client.start_private_message(guesser)
+            if guesser != member:
+                await client.send_message(ch,
+                                          "Игрок {0} добавлен в группу отгадчиков\n"
+                                          "Группа отгадчиков: {1}\n"
+                                          "Общее количество отгадчиков: **{2}**".format(guesser.name, guessers,
+                                                                                        len(guessers_list)))
+            else:
+                await client.send_message(ch,
+                                          "Вы добавлены в группу отгадчиков\n"
+                                          "Группа отгадчиков: {1}\n"
+                                          "Общее количество отгадчиков: **{2}**".format(guesser.name, guessers,
+                                                                                        len(guessers_list)))
+    elif member in guessers_list:
+        guessers = "**" + "**, **".join(guesser_names) + "**"
+        await client.send_message(ch,
+                                  'Вы уже в группе отгадчиков \nГруппа отгадчиков: {0}\nОбщее количество '
+                                  'отгадчиков: **{1}**'.format(guessers, len(guessers_list)))
+
+async def remove_guesser(member, guessers_list):
+    if member in guessers_list:
+        guessers_list.remove(member)
+        guesser_names.remove(member.name)
+        guessers = "**" + "**, **".join(guesser_names) + "**"
+        ch = await client.start_private_message(member)
+        await client.send_message(ch,
+                                  "Вы удалены из группы олтгадчиков\n"
+                                  "Группа отгадчиков: {0}\n"
+                                  "Общее количество отгадчиков: **{1}**".format(guessers, len(guessers_list)))
+        for guesser in guessers_list:
+            ch = await client.start_private_message(guesser)
+            await client.send_message(ch,
+                                      "Игрок {0} удалён из группы олтгадчиков\n"
+                                      "Группа отгадчиков: {1}\n"
+                                      "Общее количество отгадчиков: **{2}**".format(member.name, guessers,
+                                                                                    len(guessers_list)))
+
+async def add_debater(member, debaters_list):
+    ch = await client.start_private_message(member)
+    if member not in debaters_list:
+        debaters_list.append(member)
+        debater_names.append(member.name)
+        debaters = "**" + "**, **".join(debater_names) + "**"
+
+        for debater in debaters_list:
+            ch = await client.start_private_message(debater)
+            if debater != member:
+                await client.send_message(ch,
+                                          "Игрок {0} добавлен в группу спорщиков\n"
+                                          "Группа спорщиков: {1}\n"
+                                          "Общее количество спорщиков: **{2}**".format(debater.name, debaters,
+                                                                                       len(debaters_list)))
+            else:
+                await client.send_message(ch,
+                                          "Вы добавлены в группу спорщиков\n"
+                                          "Группа спорщиков: {1}\n"
+                                          "Общее количество спорщиков: **{2}**".format(debater.name, debaters,
+                                                                                       len(debaters_list)))
+    elif member in debaters_list:
+        debaters = "**" + "**, **".join(debater_names) + "**"
+        await client.send_message(ch,
+                                  'Вы уже в группе спорщиков \nГруппа спорщиков: {0}\nОбщее количество '
+                                  'спорщиков: **{1}**'.format(debaters, len(debaters_list)))
+
+async def remove_debater(member, debaters_list):
+    if member in debaters_list:
+        debaters_list.remove(member)
+        debater_names.remove(member.name)
+        debaters = "**" + "**, **".join(debater_names) + "**"
+        ch = await client.start_private_message(member)
+        await client.send_message(ch,
+                                  "Вы удалены из группы спорщиков\n"
+                                  "Группа спорщиков: {0}\n"
+                                  "Общее количество спорщиков: **{1}**".format(debaters, len(debaters_list)))
+        for debater in debaters_list:
+            ch = await client.start_private_message(debater)
+            await client.send_message(ch,
+                                      "Игрок {0} удалён из группы спорщиков\n"
+                                      "Группа отгадчиков: {1}\n"
+                                      "Общее количество спорщиков: **{2}**".format(member.name, debaters,
+                                                                                   len(debaters_list)))
+
+
 @client.event
 async def on_message(message):
     global game_timer
@@ -122,7 +212,11 @@ async def on_message(message):
 
 "!d" или "!спорщик" - Добавляет пользователя в группу спорщиков
 
+"!-d" или "!-спорщик" - Удаляет пользователя из группы спорщиков
+
 "!g" или "!отгадчик" - Добавляет пользователя в группу отгадчиков
+
+"!-g" или "!-отгадчик" - Удаляет пользователя из группы отгадчиков
 
 "!s" или "!старт! - если указанно минимальное количество отгадчиков и спорщиков, то запускает таймер игры
 
@@ -134,86 +228,20 @@ async def on_message(message):
 ```""")
 
     if message.content == "!d" or  message.content == "!спорщик":
-        ch = await client.start_private_message(member)
-        if member not in debaters_list:
-            debaters_list.append(member)
-            debater_names.append(member.name)
-            debaters = "**"+"**, **".join(debater_names) + "**"
-
-            for debater in debaters_list:
-                ch = await client.start_private_message(debater)
-                if debater != member:
-                    await client.send_message(ch,
-                                              "Игрок {0} добавлен в группу спорщиков\n"
-                                              "Группа спорщиков: {1}\n"
-                                              "Общее количество спорщиков: **{2}**".format(debater.name, debaters,
-                                                                                           len(debaters_list)))
-                else:
-                    await client.send_message(ch,
-                                              "Вы добавлены в группу спорщиков\n"
-                                              "Группа спорщиков: {1}\n"
-                                              "Общее количество спорщиков: **{2}**".format(debater.name, debaters,
-                                                                                           len(debaters_list)))
-        elif member in debaters_list:
-            await client.send_message(ch,
-                                      'Вы уже в группе спорщиков \nГруппа спорщиков: {0}\nОбщее количество '
-                                      'спорщиков: **{1}**'.format(debaters, len(debaters_list)))
-        if member in guessers_list:
-            guessers_list.remove(member)
-            guesser_names.remove(member.name)
-            guessers = "**"+"**, **".join(guesser_names) + "**"
-            ch = await client.start_private_message(member)
-            await client.send_message(ch,
-                                      "Вы удалены из группы олтгадчиков\n"
-                                      "Группа отгадчиков: {0}\n"
-                                      "Общее количество отгадчиков: **{1}**".format(guessers, len(guessers_list)))
-            for guesser in guessers_list:
-                ch = await client.start_private_message(guesser)
-                await client.send_message(ch,
-                                          "Игрок {0} удалён из группы олтгадчиков\n"
-                                          "Группа отгадчиков: {1}\n"
-                                          "Общее количество отгадчиков: **{2}**".format(member.name, guessers, len(guessers_list)))
+        await add_debater(member, debaters_list)
+        await remove_guesser(member, guessers_list)
 
     if message.content == "!g" or message.content == "!отгадчик":
-        ch = await client.start_private_message(member)
-        if member not in guessers_list:
-            guessers_list.append(member)
-            guesser_names.append(member.name)
-            guessers = "**"+"**, **".join(guesser_names) + "**"
+        await client.loop.create_task(add_guesser(member, guessers_list))
+        await client.loop.create_task(remove_debater(member, debaters_list))
 
-            for guesser in guessers_list:
-                ch = await client.start_private_message(guesser)
-                if guesser != member:
-                    await client.send_message(ch,
-                                              "Игрок {0} добавлен в группу отгадчиков\n"
-                                              "Группа отгадчиков: {1}\n"
-                                              "Общее количество отгадчиков: **{2}**".format(guesser.name, guessers,
-                                                                                           len(guessers_list)))
-                else:
-                    await client.send_message(ch,
-                                              "Вы добавлены в группу отгадчиков\n"
-                                              "Группа отгадчиков: {1}\n"
-                                              "Общее количество отгадчиков: **{2}**".format(guesser.name, guessers,
-                                                                                           len(guessers_list)))
-        elif member in guessers_list:
-            await client.send_message(ch,
-                                      'Вы уже в группе отгадчиков \nГруппа отгадчиков: {0}\nОбщее количество '
-                                      'отгадчиков: **{1}**'.format(guessers, len(guessers_list)))
-        if member in debaters_list:
-            debaters_list.remove(member)
-            debater_names.remove(member.name)
-            debaters = "**"+"**, **".join(debater_names) + "**"
-            ch = await client.start_private_message(member)
-            await client.send_message(ch,
-                                      "Вы удалены из группы спорщиков\n"
-                                      "Группа спорщиков: {0}\n"
-                                      "Общее количество спорщиков: **{1}**".format(debaters, len(debaters_list)))
-            for debater in debaters_list:
-                ch = await client.start_private_message(debater)
-                await client.send_message(ch,
-                                          "Игрок {0} удалён из группы спорщиков\n"
-                                          "Группа отгадчиков: {1}\n"
-                                          "Общее количество спорщиков: **{2}**".format(member.name, debaters, len(debaters_list)))
+    if message.content == "!-g" or message.content == "!-отгадчик":
+        await remove_guesser(member, guessers_list)
+
+    if message.content == "!-d" or message.content == "!-спорщик":
+        await client.loop.create_task(remove_debater(member, debaters_list))
+
+
     # Старт игры
     if message.content == '!s' or message.content == '!старт':
         # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
@@ -339,7 +367,7 @@ async def on_message(message):
     if message.content.isdigit() and len(message.content) < 2:
         pass
 
-    if message.content == '!r' or "!правила":
+    if message.content == '!r' or message.content == "!правила":
         """Показать правила игры"""
         ch = await client.start_private_message(member)
         # Разделено на 3 сообщения, из-за лимита на количество символов в discord
