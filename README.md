@@ -2,7 +2,7 @@
 Чат бот для игры [Fallacymania](http://fallacymania.com/) на [discord](https://discordapp.com/).
 
 На данный реализован весь функционал для игры. Хотя бот сырой, нетестированный и не содержит нужное количество проверок, можно пробовать играть.
-Реализовано по [#2](https://github.com/fleytman/fallacymania_discord/issues/1)
+Реализовано по [#1](https://github.com/fleytman/fallacymania_discord/issues/1)
 
 Команды:
 
