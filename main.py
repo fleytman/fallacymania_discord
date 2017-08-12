@@ -23,17 +23,10 @@ description = '''Чат-бот для игры в fallacymania'''
 client = discord.Client()
 server = discord.Server
 # ------------------------------------------------------------------------------
-paused = False
+# Переменная отвечает за то запущенна ли игра
 started = False
 channel = False
-debaters_list = []
-debater_names = []
-guesser_attempts = []
-guessers_list = []
-guesser_names = []
-guesser_points = []
-discard = []
-
+# Переменная отвечает за пазу в запущенной игре
 
 async def end_game():
     global started
@@ -69,6 +62,7 @@ async def end_game():
 
 
 def end():
+    reset()
     client.loop.create_task(end_game())
 
 t = 1200
@@ -84,8 +78,27 @@ async def on_ready():
 
     print('------')
 
+    reset()
 
-async def add_guesser(member, guessers_list):
+
+async def reset():
+    global debaters_list
+    global debater_names
+    global guessers_list
+    global guesser_names
+    global guesser_attempts
+    global guesser_points
+    global paused
+
+    paused = False
+    debaters_list = []
+    debater_names = []
+    guesser_attempts = []
+    guessers_list = []
+    guesser_names = []
+    guesser_points = []
+
+async def add_guesser(member, guessers_list, guesser_names):
     ch = await client.start_private_message(member)
     if member not in guessers_list:
         guessers_list.append(member)
@@ -112,7 +125,7 @@ async def add_guesser(member, guessers_list):
                                   'Вы уже в группе отгадчиков \nГруппа отгадчиков: {0}\nОбщее количество '
                                   'отгадчиков: **{1}**'.format(guessers, len(guessers_list)))
 
-async def remove_guesser(member, guessers_list):
+async def remove_guesser(member, guessers_list, guesser_names):
     if member in guessers_list:
         guessers_list.remove(member)
         guesser_names.remove(member.name)
@@ -130,7 +143,7 @@ async def remove_guesser(member, guessers_list):
                                       "Общее количество отгадчиков: **{2}**".format(member.name, guessers,
                                                                                     len(guessers_list)))
 
-async def add_debater(member, debaters_list):
+async def add_debater(member, debaters_list, debater_names):
     ch = await client.start_private_message(member)
     if member not in debaters_list:
         debaters_list.append(member)
@@ -157,7 +170,7 @@ async def add_debater(member, debaters_list):
                                   'Вы уже в группе спорщиков \nГруппа спорщиков: {0}\nОбщее количество '
                                   'спорщиков: **{1}**'.format(debaters, len(debaters_list)))
 
-async def remove_debater(member, debaters_list):
+async def remove_debater(member, debaters_list, debater_names):
     if member in debaters_list:
         debaters_list.remove(member)
         debater_names.remove(member.name)
@@ -182,9 +195,11 @@ async def on_message(message):
     global started
     global paused
     global debaters_list
+    global debater_names
     global debaters
     global guessers_list
     global guessers
+    global guesser_names
     global fallacies
     global pack
     global debater_cards
@@ -206,7 +221,7 @@ async def on_message(message):
         
 Команды:
 
-"!help" или "!h" - Выводит данную справку
+"!h" или "!help" - Выводит данную справку
 
 "!r" или "!правила" - выводит правила
 
@@ -218,29 +233,50 @@ async def on_message(message):
 
 "!-g" или "!-отгадчик" - Удаляет пользователя из группы отгадчиков
 
-"!s" или "!старт! - если указанно минимальное количество отгадчиков и спорщиков, то запускает таймер игры
+"!s" или "!старт! - Если указанно минимальное количество отгадчиков и спорщиков, то запускает таймер игры
 
-"%номер_софизма%" - ищет у спорщика софизм по номеру, если находит, то забирает и даёт новый
+"p" или "!пазуа" - Приостанавливает таймер игры
 
-"+" или "-"  - дать или забрать очко у отгадчика
+"!stop" или "завершить" - Завершает игру о останавливает таймер
 
-".+" или ".-" - дать или забрать попытку у отгадчика
+"%номер_софизма%" - Ищет у спорщика софизм по номеру, если находит, то забирает и даёт новый
+
+"+" или "-"  - Даёт или забирает очко у отгадчика
+
+".+" или ".-" - Даёт или забирает попытку у отгадчика
 ```""")
 
-    if message.content == "!d" or  message.content == "!спорщик":
-        await add_debater(member, debaters_list)
-        await remove_guesser(member, guessers_list)
+    if message.content == "!d" or message.content == "!спорщик":
+        await add_debater(member, debaters_list, debater_names)
+        await remove_guesser(member, guessers_list, guesser_names)
 
     if message.content == "!g" or message.content == "!отгадчик":
-        await client.loop.create_task(add_guesser(member, guessers_list))
-        await client.loop.create_task(remove_debater(member, debaters_list))
+        await client.loop.create_task(add_guesser(member, guessers_list, guesser_names))
+        await client.loop.create_task(remove_debater(member, debaters_list,debater_names))
 
     if message.content == "!-g" or message.content == "!-отгадчик":
-        await remove_guesser(member, guessers_list)
+        await remove_guesser(member, guessers_list, guesser_names)
 
     if message.content == "!-d" or message.content == "!-спорщик":
-        await client.loop.create_task(remove_debater(member, debaters_list))
+        await client.loop.create_task(remove_debater(member, debaters_list, debater_names))
 
+    # Сбросить параматеры игры
+    if message.content == "!reset" or message.content == "!сброс":
+        if not started:
+            for user in debaters_list + guessers_list:
+                ch = await client.start_private_message(user)
+                client.send_message(ch, "Список игроков и их счёт сброшены")
+
+            reset()
+
+        else:
+            ch = await client.start_private_message(member)
+            client.send_message(ch, """"Игра уже запущена. Чтобы завершить игру введите "!stop""""")
+
+    # Завершить игру
+    if message.content == "!stop" or message.content == "!завершить":
+        game_timer.cancel()
+        end()
 
     # Старт игры
     if message.content == '!s' or message.content == '!старт':
