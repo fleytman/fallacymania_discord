@@ -326,7 +326,7 @@ async def on_message(message):
             for guesser in guessers_list:
                 # Раздать лист с софизмами отгадчикам
                 ch = await client.start_private_message(guesser)
-                await client.send_message(ch, "http://i.imgur.com/YhxwU5M.png")
+                await client.send_message(ch, "http://i.imgur.com/dduRG9o.png\nhttp://i.imgur.com/MthcrUB.png\nhttp://i.imgur.com/IvNCFBs.png")
                 # Установить начальное количество попыток и очков для отгадчиков
                 guesser_points.update({guesser: 0})
                 guesser_attempts.update({guesser: number_attempts})
