@@ -205,6 +205,7 @@ async def on_message(message):
     global debater_cards
     global guesser_points
     global guesser_attempts
+    global discard
     # global channel
     global t
 
@@ -235,7 +236,7 @@ async def on_message(message):
 
 "!s" или "!старт! - Если указанно минимальное количество отгадчиков и спорщиков, то запускает таймер игры
 
-"p" или "!пазуа" - Приостанавливает таймер игры
+"!p" или "!пазуа" - Приостанавливает таймер игры
 
 "!stop" или "завершить" - Завершает игру о останавливает таймер
 
@@ -400,8 +401,31 @@ async def on_message(message):
             ch = await client.start_private_message(guesser)
             await client.send_message(ch, "{0} {1}".format(msg, current_score(guesser_points, guesser_attempts)))
 
-    if message.content.isdigit() and len(message.content) < 2:
-        pass
+    # Удаляет карту в сброс
+    if message.content.isdigit() and len(message.content) < 2 and member in debaters_list:
+        ch = await client.start_private_message(member)
+        if len(fallacies) <= int(message.content):
+            return await client.send_message(ch, "Номер карточки должен быть не больше {}".format(len(fallacies) - 1))
+
+        so = fallacies[int(message.content)]
+
+        card_list = debater_cards.get(member)
+        if card_list.count(so) > 0:
+            card_list.remove(so)
+            card = pack.pop()
+            card_list.append(card)
+            discard.append(card)
+            await client.send_message(ch, card)
+
+        else:
+            return await client.send_message(ch, "У вас нет карточки номер {}".format(message.content))
+
+        # Если колода закончилась, то сброшенные карты перемешиваются и становятся колодой
+        if not pack:
+            pack = deepcopy(discard)
+            random.shuffle(pack)
+                discard = []
+
 
     if message.content == '!r' or message.content == "!правила":
         """Показать правила игры"""
