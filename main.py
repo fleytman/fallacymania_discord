@@ -78,7 +78,7 @@ async def on_ready():
 
     print('------')
 
-    reset()
+    await reset()
 
 
 async def reset():
@@ -266,18 +266,22 @@ async def on_message(message):
         if not started:
             for user in debaters_list + guessers_list:
                 ch = await client.start_private_message(user)
-                client.send_message(ch, "Список игроков и их счёт сброшены")
+                await client.send_message(ch, "Список игроков и их счёт сброшены")
 
-            reset()
+            await reset()
 
         else:
             ch = await client.start_private_message(member)
-            client.send_message(ch, """"Игра уже запущена. Чтобы завершить игру введите "!stop""""")
+            await client.send_message(ch, """"Игра уже запущена. Чтобы завершить игру введите "!stop""""")
 
     # Завершить игру
     if message.content == "!stop" or message.content == "!завершить":
-        game_timer.cancel()
-        end()
+        if started:
+            game_timer.cancel()
+            end()
+        else:
+            ch = await client.start_private_message(member)
+            await client.send_message(ch, "Нельзя остановить ещё не запущенную игру")
 
     # Старт игры
     if message.content == '!s' or message.content == '!старт':
