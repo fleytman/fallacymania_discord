@@ -59,8 +59,8 @@ async def end_game():
 
 
 def end():
-    reset()
     client.loop.create_task(end_game())
+    client.loop.create_task(reset())
 
 t = 1200
 game_timer = GameTimer.RenewableTimer(t, end)
