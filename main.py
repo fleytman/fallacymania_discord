@@ -372,13 +372,18 @@ async def on_message(message):
         if message.content == "+":
             guesser_points[member] = guesser_points[member] + 1
             msg = "Игрок **{0}** получил 1 очко.".format(member.name)
+            msg1 = "Вы получили 1 очко."
         elif message.content == "-":
             guesser_points[member] = guesser_points[member] - 1
             msg = "Игрок **{0}** потерял 1 очко.".format(member.name)
+            msg1 = "Вы потеряли 1 очко."
 
         for guesser in guesser_points:
             ch = await client.start_private_message(guesser)
-            await client.send_message(ch, "{0} {1}".format(msg, current_score(guesser_points, guesser_attempts)))
+            if guesser != member:
+                await client.send_message(ch, "{0} {1}".format(msg, current_score(guesser_points, guesser_attempts)))
+            else:
+                await client.send_message(ch, "{0} {1}".format(msg1, current_score(guesser_points, guesser_attempts)))
 
     # Начисление попыток
     if message.content == '.+' or message.content == '.-':
@@ -390,16 +395,23 @@ async def on_message(message):
         if message.content == ".+":
             guesser_attempts[member] = guesser_attempts[member] + 1
             msg = "Игрок **{0}** получил 1 попытку.".format(member.name)
+            msg1 = "Вы получили 1 попытку."
         elif message.content == ".-":
-            if guesser_attempts[member] < 1:
+            if guesser_attempts[member] > 0:
+                guesser_attempts[member] = guesser_attempts[member] - 1
+                msg = "Игрок **{0}** потерял 1 попытку.".format(member.name)
+                msg1 = "Вы потеряли 1 попытку.".format(member.name)
+            else:
                 guesser_points[member] = guesser_points[member] - 1
                 msg = "Попыток у игрока **{0}** нет, он потеряет 1 очко.".format(member.name)
-            guesser_attempts[member] = guesser_attempts[member] - 1
-            msg = "Игрок **{0}** потерял 1 попытку.".format(member.name)
+                msg1 = "У вас больше нет попыток, вы теряете 1 очко."
 
         for guesser in guesser_points:
             ch = await client.start_private_message(guesser)
-            await client.send_message(ch, "{0} {1}".format(msg, current_score(guesser_points, guesser_attempts)))
+            if guesser != member:
+                await client.send_message(ch, "{0} {1}".format(msg, current_score(guesser_points, guesser_attempts)))
+            else:
+                await client.send_message(ch, "{0} {1}".format(msg1, current_score(guesser_points, guesser_attempts)))
 
     # Удаляет карту в сброс
     if message.content.isdigit() and len(message.content) < 3 and member in debaters_list:
