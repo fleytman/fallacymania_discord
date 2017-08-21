@@ -330,7 +330,7 @@ async def on_message(message):
             for guesser in guessers_list:
                 # Раздать лист с софизмами отгадчикам
                 ch = await client.start_private_message(guesser)
-                await client.send_message(ch, "http://i.imgur.com/dduRG9o.png\nhttp://i.imgur.com/MthcrUB.png\nhttp://i.imgur.com/IvNCFBs.png")
+                await client.send_message(ch, "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
                 # Установить начальное количество попыток и очков для отгадчиков
                 guesser_points.update({guesser: 0})
                 guesser_attempts.update({guesser: number_attempts})
@@ -375,7 +375,7 @@ async def on_message(message):
     if message.content == '!софизмы' or message.content == '*':
         ch = await client.start_private_message(member)
         await client.send_message(ch,
-                                  "http://i.imgur.com/dduRG9o.png\nhttp://i.imgur.com/MthcrUB.png\nhttp://i.imgur.com/IvNCFBs.png")
+                                  "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
 
 
     # Начиление очков
