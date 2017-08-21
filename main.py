@@ -87,6 +87,7 @@ async def reset():
     global guesser_points
     global paused
     global guesser_last_turn
+    global guesser_messages
 
     paused = False
     debaters_list = []
@@ -97,6 +98,8 @@ async def reset():
     guesser_points = []
     guesser_points = {}
     guesser_last_turn = {}
+    guesser_messages = 0
+
 
 async def add_guesser(member, guessers_list, guesser_names):
     ch = await client.start_private_message(member)
@@ -207,6 +210,7 @@ async def on_message(message):
     global discard
     global t
     global guesser_last_turn
+    global guesser_messages
 
     member = message.author
     channel = message.channel
@@ -405,12 +409,20 @@ async def on_message(message):
                 msg = "Игрок **{0}** потерял 1 очко.".format(member.name)
                 msg1 = "Вы потеряли 1 очко."
 
+        guesser_messages += 1
         for guesser in guesser_points:
             ch = await client.start_private_message(guesser)
             if guesser != member:
                 await client.send_message(ch, "{0} {1}".format(msg, current_score(guesser_points, guesser_attempts)))
             else:
                 await client.send_message(ch, "{0} {1}".format(msg1, current_score(guesser_points, guesser_attempts)))
+
+            #Раздать лист с софизмами после 3х сообщений о счёте
+            if guesser_messages > 2:
+                await client.send_message(ch,
+                                          "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
+        if guesser_messages > 2:
+            guesser_messages = 0
 
     # Отмена
     if message.content == '!z' or message.content == '..':
