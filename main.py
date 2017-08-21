@@ -86,14 +86,17 @@ async def reset():
     global guesser_attempts
     global guesser_points
     global paused
+    global guesser_last_turn
 
     paused = False
     debaters_list = []
     debater_names = []
-    guesser_attempts = []
+    guesser_attempts = {}
     guessers_list = []
     guesser_names = []
     guesser_points = []
+    guesser_points = {}
+    guesser_last_turn = {}
 
 async def add_guesser(member, guessers_list, guesser_names):
     ch = await client.start_private_message(member)
@@ -203,6 +206,7 @@ async def on_message(message):
     global guesser_attempts
     global discard
     global t
+    global guesser_last_turn
 
     member = message.author
     channel = message.channel
@@ -239,9 +243,9 @@ async def on_message(message):
 
         "%номер_софизма%" - Ищет у спорщика софизм по номеру, если находит, то забирает и даёт новый (вбивается без знаков процент)
 
-        "+" или "-"  - Даёт или забирает очко у отгадчика
-
-        ".+" или ".-" - Даёт или забирает попытку у отгадчика
+        "+" или "-" - Даёт или забирает 1 очко у отгадчика. Пока у отгадчика есть попытки ```-``` забирает 1 попытку, а не 1 очко.
+        
+        ".." или "!z" - Отменяет последнее действие отгадчика.
         ```"""
 
         if not started:
@@ -309,9 +313,6 @@ async def on_message(message):
                 await client.send_message(ch, cards)
                 debater_cards.update({debater: card_list})
 
-            guesser_points = {}
-            guesser_attempts = {}
-
             # • если отгадчиков 1-2, каждый берёт по 15 карт попыток;
             # • если отгадчиков 3-4, каждый берёт по 10 карт попыток;
             # • если отгадчиков 5-6, каждый берёт по 8 карт попыток;
@@ -333,6 +334,7 @@ async def on_message(message):
                 # Установить начальное количество попыток и очков для отгадчиков
                 guesser_points.update({guesser: 0})
                 guesser_attempts.update({guesser: number_attempts})
+                guesser_last_turn.update({guesser: None})
 
             game_timer.start()
             await client.send_message(channel, "Игра началась")
@@ -378,19 +380,30 @@ async def on_message(message):
 
     # Начиление очков
     if message.content == '+' or message.content == '-':
+        ch = await client.start_private_message(member)
+        if not started:
+            return await client.send_message(ch, "Игра не запущенна. Проводить манипуляции со счётом до старта игры нельзя.".format(member))
+
         if member not in guesser_points:
-            ch = await client.start_private_message(member)
             return await client.send_message(ch, "'+' или '-' отправленное отгадчиком даёт или отнимает очко у "
                                                  "этого отгадчика. **{0}** - не отгадчик".format(member))
 
         if message.content == "+":
             guesser_points[member] = guesser_points[member] + 1
+            guesser_last_turn[member] = "plus_point"
             msg = "Игрок **{0}** получил 1 очко.".format(member.name)
             msg1 = "Вы получили 1 очко."
         elif message.content == "-":
-            guesser_points[member] = guesser_points[member] - 1
-            msg = "Игрок **{0}** потерял 1 очко.".format(member.name)
-            msg1 = "Вы потеряли 1 очко."
+            if guesser_attempts[member] > 0:
+                guesser_attempts[member] = guesser_attempts[member] - 1
+                guesser_last_turn[member] = "minus_attempt"
+                msg = "Игрок **{0}** потерял 1 попытку.".format(member.name)
+                msg1 = "Вы потеряли 1 попытку.".format(member.name)
+            else:
+                guesser_points[member] = guesser_points[member] - 1
+                guesser_last_turn[member] = "minus_point"
+                msg = "Игрок **{0}** потерял 1 очко.".format(member.name)
+                msg1 = "Вы потеряли 1 очко."
 
         for guesser in guesser_points:
             ch = await client.start_private_message(guesser)
@@ -399,26 +412,40 @@ async def on_message(message):
             else:
                 await client.send_message(ch, "{0} {1}".format(msg1, current_score(guesser_points, guesser_attempts)))
 
-    # Начисление попыток
-    if message.content == '.+' or message.content == '.-':
-        if member not in guesser_points:
-            ch = await client.start_private_message(member)
-            return await client.send_message(ch, "'.+' или '.-' отправленное отгадчиком даёт или отнимает попытку у "
-                                                 "этого отгадчика. **{0}** - не отгадчик".format(member))
+    # Отмена
+    if message.content == '!z' or message.content == '..':
+        ch = await client.start_private_message(member)
 
-        if message.content == ".+":
+        if not started:
+            return await client.send_message(ch, "Игра не запущенна. Нельзя отменить последнее действие".format(member))
+
+        elif member not in guesser_last_turn:
+            return await client.send_message(ch, "Отменить последнее действие может только отгадчик.".format(member))
+
+        elif guesser_last_turn[member] is None:
+            return await client.send_message(ch, "Вы ещё не совершали никаких действия")
+
+        elif guesser_last_turn[member] == "returned":
+            return await client.send_message(ch, "Вы уже отменили своё действие. Отменять больше 1 действия подряд нельзя.")
+
+        elif guesser_last_turn[member] == "plus_point":
+            guesser_points[member] = guesser_points[member] - 1
+            guesser_last_turn[member] = "returned"
+            msg = "Игрок **{0}** отменил своё последнее действие. У него забирается 1 очко.".format(member.name)
+            msg1 = "Вы отменили своё последнее действие. У вас забирается 1 очко."
+
+        elif guesser_last_turn[member] == "minus_point":
+            guesser_points[member] = guesser_points[member] + 1
+            guesser_last_turn[member] = "minus_point"
+            guesser_last_turn[member] = "returned"
+            msg = "Игрок **{0}** отменил своё последнее действие. Ему возвращается 1 очко.".format(member.name)
+            msg1 = "Вы отменили своё последнее действие. Вам возвращается 1 очко."
+
+        elif guesser_last_turn[member] == "minus_attempt":
             guesser_attempts[member] = guesser_attempts[member] + 1
-            msg = "Игрок **{0}** получил 1 попытку.".format(member.name)
-            msg1 = "Вы получили 1 попытку."
-        elif message.content == ".-":
-            if guesser_attempts[member] > 0:
-                guesser_attempts[member] = guesser_attempts[member] - 1
-                msg = "Игрок **{0}** потерял 1 попытку.".format(member.name)
-                msg1 = "Вы потеряли 1 попытку.".format(member.name)
-            else:
-                guesser_points[member] = guesser_points[member] - 1
-                msg = "Попыток у игрока **{0}** нет, он потеряет 1 очко.".format(member.name)
-                msg1 = "У вас больше нет попыток, вы теряете 1 очко."
+            guesser_last_turn[member] = "returned"
+            msg = "Игрок **{0}** отменил своё последнее действие. Ему возвращается 1 попытка.".format(member.name)
+            msg1 = "Вы отменили своё последнее действие. Вам возвращается 1 попытка.".format(member.name)
 
         for guesser in guesser_points:
             ch = await client.start_private_message(guesser)
