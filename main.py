@@ -5,12 +5,23 @@ from copy import deepcopy
 
 import logging
 
-f = open(file="token.txt", mode="r")
-token = " ".join(f.readline().split())
-f.close()
+try:
+    with open(file="token.txt", mode="r") as f:
+        token = " ".join(f.readline().split())
+        if token == "":
+            input('В первую строку файла "token.txt" надо вставить токен.\nНажмите любую клавишу для выхода из программы...\n')
+            exit()
+except FileNotFoundError:
+    input('Файла "token.txt" нет в директории.\nНажмите любую клавишу для выхода из программы...\n')
+    exit()
 
-f = open(file="fallacies.txt", mode="r")
-fallacies = f.readlines()
+
+try:
+    with open(file="fallacies.txt", mode="r") as f:
+        fallacies = f.readlines()
+except FileNotFoundError:
+    input('Файла "fallacies.txt" нет в директории.\nНажмите любую клавишу для выхода из программы...\n')
+    exit()
 
 # ------------------------------------------------------------------------------
 logger = logging.getLogger('discord')
