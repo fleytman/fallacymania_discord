@@ -1,6 +1,9 @@
 # fallacymania_discord
 Чат бот для игры [Fallacymania](http://fallacymania.com/) на [discord](https://discordapp.com/).
-Чуть подробнее про данный чат-бот: https://fleytman.ru/2017/08/14/fallacymania-for-discord/
+
+Чуть подробнее про данный чат-бот: [тут](https://fleytman.ru/2017/08/14/fallacymania-for-discord/).
+
+Как разворачивать: [тут](https://github.com/fleytman/fallacymania_discord/wiki/%D0%9A%D0%B0%D0%BA-%D0%B7%D0%B0%D0%BF%D1%83%D1%81%D1%82%D0%B8%D1%82%D1%8C-%D1%87%D0%B0%D1%82-%D0%B1%D0%BE%D1%82-fallacymania_discord-%D0%BD%D0%B0-Windows).
 
 ![screenshot](http://i.imgur.com/BzYnAIP.png)
 
