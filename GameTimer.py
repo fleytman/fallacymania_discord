@@ -28,7 +28,8 @@ class RenewableTimer():
     def resume(self):
         self.timeout = self.get_actual_time()
         self.timer = Timer(self.timeout, self.callback)
+        self.start_time = time.time()
         self.timer.start()
 
-    def get_actual_time (self):
+    def get_actual_time(self):
         return self.timeout - (self.cancel_time - self.start_time)

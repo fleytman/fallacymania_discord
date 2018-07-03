@@ -9,12 +9,12 @@ try:
     with open(file="token.txt", mode="r") as f:
         token = " ".join(f.readline().split())
         if token == "":
-            input('В первую строку файла "token.txt" надо вставить токен.\nНажмите любую клавишу для выхода из программы...\n')
+            input(
+                'В первую строку файла "token.txt" надо вставить токен.\nНажмите любую клавишу для выхода из программы...\n')
             exit()
 except FileNotFoundError:
     input('Файла "token.txt" нет в директории.\nНажмите любую клавишу для выхода из программы...\n')
     exit()
-
 
 try:
     with open(file="fallacies.txt", mode="r") as f:
@@ -36,6 +36,7 @@ server = discord.Server
 # ------------------------------------------------------------------------------
 # Переменная отвечает за то запущенна ли игра
 started = False
+
 
 async def end_game():
     global started
@@ -73,13 +74,13 @@ def end():
     client.loop.create_task(end_game())
     client.loop.create_task(reset())
 
+
 t = 1200
 game_timer = GameTimer.RenewableTimer(t, end)
 
 
 @client.event
 async def on_ready():
-
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
@@ -138,6 +139,7 @@ async def add_guesser(member, guessers_list, guesser_names):
                                   'Вы уже в группе отгадчиков \nГруппа отгадчиков: {0}\nОбщее количество '
                                   'отгадчиков: **{1}**'.format(guessers, len(guessers_list)))
 
+
 async def remove_guesser(member, guessers_list, guesser_names):
     if member in guessers_list:
         guessers_list.remove(member)
@@ -155,6 +157,7 @@ async def remove_guesser(member, guessers_list, guesser_names):
                                       "Группа отгадчиков: {1}\n"
                                       "Общее количество отгадчиков: **{2}**".format(member.name, guessers,
                                                                                     len(guessers_list)))
+
 
 async def add_debater(member, debaters_list, debater_names):
     ch = await client.start_private_message(member)
@@ -182,6 +185,7 @@ async def add_debater(member, debaters_list, debater_names):
         await client.send_message(ch,
                                   'Вы уже в группе спорщиков \nГруппа спорщиков: {0}\nОбщее количество '
                                   'спорщиков: **{1}**'.format(debaters, len(debaters_list)))
+
 
 async def remove_debater(member, debaters_list, debater_names):
     if member in debaters_list:
@@ -274,7 +278,7 @@ async def on_message(message):
 
     if message.content == "!g" or message.content == "!отгадчик":
         await client.loop.create_task(add_guesser(member, guessers_list, guesser_names))
-        await client.loop.create_task(remove_debater(member, debaters_list,debater_names))
+        await client.loop.create_task(remove_debater(member, debaters_list, debater_names))
 
     if message.content == "!-g" or message.content == "!-отгадчик":
         await remove_guesser(member, guessers_list, guesser_names)
@@ -345,7 +349,8 @@ async def on_message(message):
             for guesser in guessers_list:
                 # Раздать лист с софизмами отгадчикам
                 ch = await client.start_private_message(guesser)
-                await client.send_message(ch, "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
+                await client.send_message(ch,
+                                          "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
                 # Установить начальное количество попыток и очков для отгадчиков
                 guesser_points.update({guesser: 0})
                 guesser_attempts.update({guesser: number_attempts})
@@ -355,15 +360,16 @@ async def on_message(message):
             await client.send_message(channel, "Игра началась")
             started = True
         # Если таймер запущен
-        elif game_timer.timer.isAlive():
+        elif game_timer.timer.isAlive() and not paused:
             await client.send_message(channel, "Таймер уже запущен")
             game_timer.pause()
             s = int(game_timer.get_actual_time())
-            m = int(s/60)
+            m = int(s / 60)
             await client.send_message(channel, "Осталось {0}м {1}с".format(m, s))
             game_timer.resume()
         elif paused:
             game_timer.resume()
+            paused = False
             await client.send_message(channel, "Игра продолжается")
         elif len(debaters_list) < 2:
             await client.send_message(channel, "Нужно указать как минимум 2 спорщиков")
@@ -378,13 +384,12 @@ async def on_message(message):
             paused = True
             await client.send_message(channel, "Пауза")
             s = int(game_timer.get_actual_time())
-            m = int(s/60)
+            m = int(s / 60)
             await client.send_message(channel, "Осталось {0}м {1}с".format(m, s))
         elif not started:
             await client.send_message(channel, "Игра ещё не запущена")
         elif paused:
             await client.send_message(channel, "Игра уже на паузе")
-
 
     # Выдать лист с софизмом
     if message.content == '!софизмы' or message.content == '*':
@@ -392,12 +397,13 @@ async def on_message(message):
         await client.send_message(ch,
                                   "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
 
-
     # Начиление очков
     if message.content == '+' or message.content == '-':
         ch = await client.start_private_message(member)
         if not started:
-            return await client.send_message(ch, "Игра не запущенна. Проводить манипуляции со счётом до старта игры нельзя.".format(member))
+            return await client.send_message(ch,
+                                             "Игра не запущенна. Проводить манипуляции со счётом до старта игры нельзя.".format(
+                                                 member))
 
         if member not in guesser_points:
             return await client.send_message(ch, "'+' или '-' отправленное отгадчиком даёт или отнимает очко у "
@@ -428,7 +434,7 @@ async def on_message(message):
             else:
                 await client.send_message(ch, "{0} {1}".format(msg1, current_score(guesser_points, guesser_attempts)))
 
-            #Раздать лист с софизмами после 3х сообщений о счёте
+            # Раздать лист с софизмами после 3х сообщений о счёте
             if guesser_messages > 2:
                 await client.send_message(ch,
                                           "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
@@ -449,7 +455,8 @@ async def on_message(message):
             return await client.send_message(ch, "Вы ещё не совершали никаких действия")
 
         elif guesser_last_turn[member] == "returned":
-            return await client.send_message(ch, "Вы уже отменили своё действие. Отменять больше 1 действия подряд нельзя.")
+            return await client.send_message(ch,
+                                             "Вы уже отменили своё действие. Отменять больше 1 действия подряд нельзя.")
 
         elif guesser_last_turn[member] == "plus_point":
             guesser_points[member] = guesser_points[member] - 1
