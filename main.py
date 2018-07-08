@@ -283,6 +283,8 @@ async def on_message(message):
     "!p" или "!пазуа" - Приостанавливает таймер игры
 
     "!stop" или "завершить" - Завершает игру о останавливает таймер
+    
+    "!reset" или "!сброс" - Удаляет всех игроков из групп отгадчиков и спорщиков
 
     "%номер_софизма%" - Ищет у спорщика софизм по номеру, если находит, то забирает и даёт новый (вбивается без знаков процент)
 
@@ -387,14 +389,17 @@ async def on_message(message):
         elif game_timer.timer.isAlive() and not paused:
             await client.send_message(channel, "Таймер уже запущен")
             game_timer.pause()
-            s = int(game_timer.get_actual_time())
-            m = int(s / 60)
+            m, s = divmod(int(game_timer.get_actual_time()), 60)
             await client.send_message(channel, "Осталось {0}м {1}с".format(m, s))
             game_timer.resume()
         elif paused:
+            for user in guessers_list + debaters_list:
+                ch = await client.start_private_message(user)
+                m, s = divmod(int(game_timer.get_actual_time()), 60)
+                await client.send_message(ch, "Игра продолжается\nОсталось {0}м {1}с".format(m, s))
             game_timer.resume()
             paused = False
-            await client.send_message(channel, "Игра продолжается")
+
         elif len(debaters_list) < 2:
             await client.send_message(channel, "Нужно указать как минимум 2 спорщиков")
         elif len(guessers_list) < 1:
@@ -406,9 +411,11 @@ async def on_message(message):
             game_timer.pause()
             game_timer.get_actual_time()
             paused = True
-            await client.send_message(channel, "Пауза")
-            m, s = divmod(int(game_timer.get_actual_time()), 60)
-            await client.send_message(channel, "Осталось {0}м {1}с".format(m, s))
+
+            for user in guessers_list + debaters_list:
+                ch = await client.start_private_message(user)
+                m, s = divmod(int(game_timer.get_actual_time()), 60)
+                await client.send_message(ch, "Пауза\nОсталось {0}м {1}с".format(m, s))
         elif not started:
             await client.send_message(channel, "Игра ещё не запущена")
         elif paused:
