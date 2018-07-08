@@ -1,4 +1,8 @@
-﻿import discord
+﻿import configparser
+
+import discord
+import sys
+
 import GameTimer
 import random
 from copy import deepcopy
@@ -23,12 +27,17 @@ except FileNotFoundError:
     input('Файла "fallacies.txt" нет в директории.\nНажмите любую клавишу для выхода из программы...\n')
     exit()
 
+
 # ------------------------------------------------------------------------------
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.ERROR)
+logger.addHandler(stdout_handler)
 # ------------------------------------------------------------------------------
 description = '''Чат-бот для игры в fallacymania'''
 client = discord.Client()
@@ -36,6 +45,20 @@ server = discord.Server
 # ------------------------------------------------------------------------------
 # Переменная отвечает за то запущенна ли игра
 started = False
+
+
+def loadconfig():
+    c = configparser.ConfigParser()
+    c.read('config.ini')
+    try:
+        time = c.getint('game', 'time')
+    except ValueError:
+        logger.error(
+            "В config.ini неверно указано значение time. Значение установлено на 1200")
+        time = 1200
+    return {'t': time}
+
+config = loadconfig()
 
 
 async def end_game():
@@ -75,7 +98,8 @@ def end():
     client.loop.create_task(reset())
 
 
-t = 1200
+t = config["t"]
+# t = 1200
 game_timer = GameTimer.RenewableTimer(t, end)
 
 
@@ -383,8 +407,7 @@ async def on_message(message):
             game_timer.get_actual_time()
             paused = True
             await client.send_message(channel, "Пауза")
-            s = int(game_timer.get_actual_time())
-            m = int(s / 60)
+            m, s = divmod(int(game_timer.get_actual_time()), 60)
             await client.send_message(channel, "Осталось {0}м {1}с".format(m, s))
         elif not started:
             await client.send_message(channel, "Игра ещё не запущена")
