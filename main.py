@@ -41,7 +41,6 @@ logger.addHandler(stdout_handler)
 # ------------------------------------------------------------------------------
 description = '''Чат-бот для игры в fallacymania'''
 client = discord.Client()
-server = discord.Server
 # ------------------------------------------------------------------------------
 # Переменная отвечает за то запущенна ли игра
 started = False
@@ -57,8 +56,6 @@ def loadconfig():
             "В config.ini неверно указано значение time. Значение установлено на 1200")
         time = 1200
     return {'t': time}
-
-config = loadconfig()
 
 
 async def end_game():
@@ -98,8 +95,13 @@ def end():
     client.loop.create_task(reset())
 
 
-t = config["t"]
-# t = 1200
+try:
+    config = loadconfig()
+    t = config["t"]
+except:
+    t = 1200
+    logger.error("Файл config.ini отсуствует или содержит некорретные данные, были загруженны настройки по умолчанию.")
+
 game_timer = GameTimer.RenewableTimer(t, end)
 
 
