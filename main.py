@@ -21,9 +21,8 @@ def load_config():
     return {'t': time}
 
 
-def end():
-    client.loop.create_task(end_game())
-    client.loop.create_task(reset())
+def h():
+    print("123")
 
 
 class DiscordClient(discord.Client):
@@ -41,8 +40,12 @@ class DiscordClient(discord.Client):
         self.guesser_last_turn = {}
         self.guesser_messages = 0
 
-        self.t = 1200
-        self.game_timer = GameTimer.RenewableTimer(self.t, end)
+        self.debater_cards = {}
+        self.pack = {}
+        self.discard = []
+
+        self.t = 5
+        self.game_timer = GameTimer.RenewableTimer(self.t, self.end)
 
         self.started = False
 
@@ -73,6 +76,37 @@ class DiscordClient(discord.Client):
         self.guesser_last_turn.clear
         self.guesser_messages = 0
         print(self.paused)
+
+    def end(self):
+        self.loop.create_task(self.end_game())
+        self.loop.create_task(self.__reset__())
+
+    async def end_game(self):
+        self.started = False
+
+        max_points = 0
+        winners = []
+        # Определяет отгадчика с максимальным количеством очков
+        for guesser in self.guesser_points:
+            if self.guesser_points[guesser] > max_points:
+                max_points = self.guesser_points[guesser]
+                winner = guesser
+                winners = [winner.name]
+            elif self.guesser_points[guesser] == max_points:
+                winners.append(guesser.name)
+
+        if len(self.guesser_points) < 2:
+            msg = "Победитель **{}**".format(guesser.name)
+        elif len(winners) < 2:
+            msg = "Победитель **{}**".format(winner.name)
+        elif len(winners) > 1:
+            msg = "Победители {}".format("**" + "**, **".join(winners) + "**")
+
+        score = self.current_score()
+
+        for user in self.guessers_list + self.debaters_list:
+            await user.send("{0}\n{1}\nИгра закончилась".format(score, msg))
+        print("Игра закончилась")
 
     def current_score(self):
         msg = "Общий счёт (Игрок: очки | попытки):\n"
@@ -240,105 +274,101 @@ class DiscordClient(discord.Client):
         # # Завершить игру
         # if message.content == "!stop" or message.content == "!завершить":
         #     if started:
-        #         game_timer.cancel()
+        #         self.game_timer.cancel()
         #         end()
         #     else:
         #         ch = await client.start_private_message(member)
         #         await client.send_message(ch, "Нельзя остановить ещё не запущенную игру")
         #
-        # # Старт игры
-        # if message.content == '!s' or message.content == '!старт':
-        #     # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
-        #     if not (game_timer.timer.isAlive() or paused) and len(debaters_list) > 1 and len(guessers_list) > 0:
-        #         game_timer = GameTimer.RenewableTimer(t, end)
-        #         debater_cards = {}
-        #         pack = deepcopy(fallacies)
-        #         discard = []
-        #         # Перемешать колоду
-        #         random.shuffle(pack)
-        #         # Раздать карты спорщикам
-        #         for debater in debaters_list:
-        #             ch = await client.start_private_message(debater)
-        #             i = 0
-        #             card_list = []
-        #             cards = ""
-        #             while i < 5:
-        #                 card = pack.pop()
-        #                 cards += card
-        #                 card_list.append(card)
-        #                 i += 1
-        #             await client.send_message(ch, cards)
-        #             debater_cards.update({debater: card_list})
-        #
-        #         # • если отгадчиков 1-2, каждый берёт по 15 карт попыток;
-        #         # • если отгадчиков 3-4, каждый берёт по 10 карт попыток;
-        #         # • если отгадчиков 5-6, каждый берёт по 8 карт попыток;
-        #         # • если отгадчиков больше 6, то 50 карт попыток делятся поровну между отгадчиками,
-        #         # а остаток убирается обратно в коробку.
-        #         if len(guessers_list) < 3:
-        #             number_attempts = 15
-        #         elif len(guessers_list) < 5:
-        #             number_attempts = 10
-        #         elif len(guessers_list) < 7:
-        #             number_attempts = 8
-        #         elif len(guessers_list) > 6:
-        #             number_attempts = int(50 / len(guessers_list))
-        #
-        #         for guesser in guessers_list:
-        #             # Раздать лист с софизмами отгадчикам
-        #             ch = await client.start_private_message(guesser)
-        #             await client.send_message(ch,
-        #                                       "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
-        #             # Установить начальное количество попыток и очков для отгадчиков
-        #             guesser_points.update({guesser: 0})
-        #             guesser_attempts.update({guesser: number_attempts})
-        #             guesser_last_turn.update({guesser: None})
-        #
-        #         game_timer.start()
-        #         await client.send_message(channel, "Игра началась")
-        #         started = True
-        #     # Если таймер запущен
-        #     elif game_timer.timer.isAlive() and not paused:
-        #         await client.send_message(channel, "Таймер уже запущен")
-        #         game_timer.pause()
-        #         m, s = divmod(int(game_timer.get_actual_time()), 60)
-        #         await client.send_message(channel, "Осталось {0}м {1}с".format(m, s))
-        #         self.game_timer.resume()
-        #     elif self.paused:
-        #         for user in self.guessers_list + self.debaters_list:
-        #             ch = await client.start_private_message(user)
-        #             m, s = divmod(int(game_timer.get_actual_time()), 60)
-        #             await client.send_message(ch, "Игра продолжается\nОсталось {0}м {1}с".format(m, s))
-        #         self.game_timer.resume()
-        #         paused = False
-        #
-        #     elif len(self.debaters_list) < 2:
-        #         await client.send_message(channel, "Нужно указать как минимум 2 спорщиков")
-        #     elif len(self.guessers_list) < 1:
-        #         await client.send_message(channel, "Нужно указать как минимум 1 отгадчика")
-        #
-        # # Пауза
-        # if message.content == '!p' or message.content == '!пауза':
-        #     if started and not paused:
-        #         game_timer.pause()
-        #         game_timer.get_actual_time()
-        #         paused = True
-        #
-        #         for user in guessers_list + debaters_list:
-        #             ch = await client.start_private_message(user)
-        #             m, s = divmod(int(game_timer.get_actual_time()), 60)
-        #             await client.send_message(ch, "Пауза\nОсталось {0}м {1}с".format(m, s))
-        #     elif not started:
-        #         await client.send_message(channel, "Игра ещё не запущена")
-        #     elif paused:
-        #         await client.send_message(channel, "Игра уже на паузе")
-        #
-        # # Выдать лист с софизмом
-        # if message.content == '!софизмы' or message.content == '*':
-        #     ch = await client.start_private_message(member)
-        #     await client.send_message(ch,
-        #                               "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
-        #
+        # Старт игры
+        if message.content == '!s' or message.content == '!старт':
+            # Если таймер не запущен и игра не на паузе, есть как минимум 2 спорщика и 1 отгадчик
+            if not (self.game_timer.timer.isAlive() or self.paused) and len(self.debaters_list) > 1 and len(
+                    self.guessers_list) > 0:
+                self.game_timer = GameTimer.RenewableTimer(self.t, self.end)
+                self.debater_cards = {}
+                self.pack = deepcopy(fallacies)
+                self.discard = []
+                # Перемешать колоду
+                random.shuffle(self.pack)
+                # Раздать карты спорщикам
+                for debater in self.debaters_list:
+                    i = 0
+                    card_list = []
+                    cards = ""
+                    while i < 5:
+                        card = self.pack.pop()
+                        cards += card
+                        card_list.append(card)
+                        i += 1
+                    await debater.send(cards)
+                    self.debater_cards.update({debater: card_list})
+
+                # • если отгадчиков 1-2, каждый берёт по 15 карт попыток;
+                # • если отгадчиков 3-4, каждый берёт по 10 карт попыток;
+                # • если отгадчиков 5-6, каждый берёт по 8 карт попыток;
+                # • если отгадчиков больше 6, то 50 карт попыток делятся поровну между отгадчиками,
+                # а остаток убирается обратно в коробку.
+                if len(self.guessers_list) < 3:
+                    number_attempts = 15
+                elif len(self.guessers_list) < 5:
+                    number_attempts = 10
+                elif len(self.guessers_list) < 7:
+                    number_attempts = 8
+                elif len(self.guessers_list) > 6:
+                    number_attempts = int(50 / len(self.guessers_list))
+
+                for guesser in self.guessers_list:
+                    # Раздать лист с софизмами отгадчикам
+                    await guesser.send(
+                        "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
+                    # Установить начальное количество попыток и очков для отгадчиков
+                    self.guesser_points.update({guesser: 0})
+                    self.guesser_attempts.update({guesser: number_attempts})
+                    self.guesser_last_turn.update({guesser: None})
+
+                self.game_timer.start()
+                await channel.send("Игра началась")
+                self.started = True
+            # Если таймер запущен
+            elif self.game_timer.timer.isAlive() and not self.paused:
+                await channel.send("Таймер уже запущен")
+                self.game_timer.pause()
+                m, s = divmod(int(self.game_timer.get_actual_time()), 60)
+                await channel.send("Осталось {0}м {1}с".format(m, s))
+                self.game_timer.resume()
+            elif self.paused:
+                for user in self.guessers_list + self.debaters_list:
+                    m, s = divmod(int(self.game_timer.get_actual_time()), 60)
+                    await user.send("Игра продолжается\nОсталось {0}м {1}с".format(m, s))
+                self.game_timer.resume()
+                self.paused = False
+
+            elif len(self.debaters_list) < 2:
+                await channel.send("Нужно указать как минимум 2 спорщиков")
+            elif len(self.guessers_list) < 1:
+                await channel.send("Нужно указать как минимум 1 отгадчика")
+
+        # Пауза
+        if message.content == '!p' or message.content == '!пауза':
+            if self.started and not self.paused:
+                self.game_timer.pause()
+                self.game_timer.get_actual_time()
+                self.paused = True
+
+                for user in self.guessers_list + self.debaters_list:
+                    m, s = divmod(int(self.game_timer.get_actual_time()), 60)
+                    await user.send("Пауза\nОсталось {0}м {1}с".format(m, s))
+            elif not self.started:
+                await channel.send("Игра ещё не запущена")
+            elif self.paused:
+                await channel.send("Игра уже на паузе")
+
+        # Выдать лист с софизмом
+        if message.content == '!софизмы' or message.content == '*':
+            await member.send(
+                "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
+
         # # Начиление очков
         # if message.content == '+' or message.content == '-':
         #     ch = await client.start_private_message(member)
@@ -435,9 +465,8 @@ class DiscordClient(discord.Client):
 
         # Удаляет карту в сброс
         if message.content.isdigit() and len(message.content) < 3 and member in self.debaters_list:
-            ch = await discord.Client.start_private_message(member)
             if len(fallacies) <= int(message.content):
-                return await member.channel.send("Номер карточки должен быть не больше {}".format(
+                return await member.send("Номер карточки должен быть не больше {}".format(
                     len(fallacies) - 1))
 
             so = fallacies[int(message.content)]
@@ -448,10 +477,10 @@ class DiscordClient(discord.Client):
                 card = self.pack.pop()
                 card_list.append(card)
                 self.discard.append(card)
-                await discord.Client.send_message(ch, " ".join(card_list))
+                await member.send(" ".join(card_list))
 
             else:
-                return await discord.Client.send_message(ch, "У вас нет карточки номер {}".format(message.content))
+                return await member.send("У вас нет карточки номер {}".format(message.content))
 
             # Если колода закончилась, то сброшенные карты перемешиваются и становятся колодой
             if not self.pack:
@@ -542,7 +571,6 @@ if __name__ == "__main__":
         logger.error(
             "Файл config.ini отсуствует или содержит некорретные данные, были загруженны настройки по умолчанию.")
 
-    game_timer = GameTimer.RenewableTimer(t, end)
-
+    _game_timer = GameTimer.RenewableTimer(t, h())
     client = DiscordClient()
     client.run(token)

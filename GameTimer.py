@@ -9,7 +9,8 @@ class RenewableTimer():
         self.start_time = time.time()
         self.timeout = timeout
         self.callback = callback
-        self.timer = Timer(timeout, callback)
+        self.timer = Timer(self.timeout, self.callback)
+        self.cancel_time = time.time()
 
     def cancel(self):
         self.timer.cancel()
