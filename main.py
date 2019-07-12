@@ -1,12 +1,12 @@
 ﻿import configparser
+import logging
+import random
+import sys
+from copy import deepcopy
 
 import discord
-import sys
-import logging
 
 import GameTimer
-import random
-from copy import deepcopy
 
 
 def load_config():
@@ -21,14 +21,9 @@ def load_config():
     return {'t': time}
 
 
-def h():
-    print("123")
-
-
 class DiscordClient(discord.Client):
     def __init__(self, **kwargs):
         discord.Client.__init__(self, **kwargs)
-        self.text = "fww"
 
         self.paused = False
         self.debaters_list = []
@@ -571,6 +566,5 @@ if __name__ == "__main__":
         logger.error(
             "Файл config.ini отсуствует или содержит некорретные данные, были загруженны настройки по умолчанию.")
 
-    _game_timer = GameTimer.RenewableTimer(t, h())
     client = DiscordClient()
     client.run(token)
