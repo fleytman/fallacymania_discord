@@ -51,26 +51,17 @@ class DiscordClient(discord.Client):
         print(client.user.id)
 
         print('------')
-        await self._test_()
-
-    async def _test_(self):
-        await self.__reset__()
-        self.paused = True
-        print(self.paused)
-        await self.__reset__()
-        print(self.paused)
 
     async def __reset__(self):
         self.paused = False
-        self.debaters_list.clear
-        self.debater_names.clear
-        self.guesser_attempts.clear
-        self.guessers_list.clear
-        self.guesser_names.clear
-        self.guesser_points.clear
-        self.guesser_last_turn.clear
+        self.debaters_list.clear()
+        self.debater_names.clear()
+        self.guesser_attempts.clear()
+        self.guessers_list.clear()
+        self.guesser_names.clear()
+        self.guesser_points.clear()
+        self.guesser_last_turn.clear()
         self.guesser_messages = 0
-        print(self.paused)
 
     def end(self):
         self.loop.create_task(self.end_game())
@@ -256,9 +247,11 @@ class DiscordClient(discord.Client):
         # Сбросить параматеры игры
         if message.content == "!reset" or message.content == "!сброс":
             if not self.started:
-                for user in self.debaters_list + self.guessers_list:
-                    await user.send("Список игроков и их счёт сброшены")
-
+                if self.debaters_list + self.guessers_list != []:
+                    for user in self.debaters_list + self.guessers_list:
+                        await user.send("Список игроков и их счёт сброшены")
+                else:
+                    await member.send("Список игроков и их счёт сброшены")
                 await self.__reset__()
 
             else:
