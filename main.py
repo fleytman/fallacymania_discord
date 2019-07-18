@@ -257,12 +257,12 @@ class DiscordClient(discord.Client):
         if message.content == "!reset" or message.content == "!сброс":
             if not self.started:
                 for user in self.debaters_list + self.guessers_list:
-                    user.send("Список игроков и их счёт сброшены")
+                    await user.send("Список игроков и их счёт сброшены")
 
                 await self.__reset__()
 
             else:
-                member.send(""""Игра уже запущена. Чтобы завершить игру введите "!stop""""")
+                await member.send(""""Игра уже запущена. Чтобы завершить игру введите "!stop""""")
 
         # Завершить игру
         if message.content == "!stop" or message.content == "!завершить":
