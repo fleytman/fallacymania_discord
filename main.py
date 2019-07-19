@@ -101,91 +101,91 @@ class DiscordClient(discord.Client):
                                                             self.guesser_attempts[guesser])
         return score_message
 
-    async def add_guesser(self, member, guessers_list, guesser_names):
-        if member not in guessers_list:
-            guessers_list.append(member)
-            guesser_names.append(member.name)
-            guessers = "**" + "**, **".join(guesser_names) + "**"
+    async def add_guesser(self, member):
+        if member not in self.guessers_list:
+            self.guessers_list.append(member)
+            self.guesser_names.append(member.name)
+            guessers = "**" + "**, **".join(self.guesser_names) + "**"
 
-            for guesser in guessers_list:
+            for guesser in self.guessers_list:
                 if guesser != member:
                     await guesser.send(
                         "Игрок {0} добавлен в группу отгадчиков\n"
                         "Группа отгадчиков: {1}\n"
                         "Общее количество отгадчиков: **{2}**".format(member.name, guessers,
-                                                                      len(guessers_list)))
+                                                                      len(self.guessers_list)))
                 else:
                     await guesser.send(
                         "Вы добавлены в группу отгадчиков\n"
                         "Группа отгадчиков: {0}\n"
                         "Общее количество отгадчиков: **{1}**".format(guessers,
-                                                                      len(guessers_list)))
-        elif member in guessers_list:
-            guessers = "**" + "**, **".join(guesser_names) + "**"
+                                                                      len(self.guessers_list)))
+        elif member in self.guessers_list:
+            guessers = "**" + "**, **".join(self.guesser_names) + "**"
             await member.send(
                 'Вы уже в группе отгадчиков \nГруппа отгадчиков: {0}\nОбщее количество '
-                'отгадчиков: **{1}**'.format(guessers, len(guessers_list)))
+                'отгадчиков: **{1}**'.format(guessers, len(self.guessers_list)))
 
-    async def remove_guesser(self, member, guessers_list, guesser_names):
-        if member in guessers_list:
-            guessers_list.remove(member)
-            guesser_names.remove(member.name)
-            guessers = "**" + "**, **".join(guesser_names) + "**"
+    async def remove_guesser(self, member):
+        if member in self.guessers_list:
+            self.guessers_list.remove(member)
+            self.guesser_names.remove(member.name)
+            guessers = "**" + "**, **".join(self.guesser_names) + "**"
             await member.send(
                 "Вы удалены из группы отгадчиков\n"
                 "Группа отгадчиков: {0}\n"
-                "Общее количество отгадчиков: **{1}**".format(guessers, len(guessers_list)))
-            for guesser in guessers_list:
+                "Общее количество отгадчиков: **{1}**".format(guessers, len(self.guessers_list)))
+            for guesser in self.guessers_list:
                 await guesser.send(
                     "Игрок {0} удалён из группы отгадчиков\n"
                     "Группа отгадчиков: {1}\n"
                     "Общее количество отгадчиков: **{2}**".format(member.name, guessers,
-                                                                  len(guessers_list)))
+                                                                  len(self.guessers_list)))
 
-    async def add_debater(self, member, debaters_list, debater_names):
-        if member not in debaters_list:
-            debaters_list.append(member)
-            debater_names.append(member.name)
-            debaters = "**" + "**, **".join(debater_names) + "**"
+    async def add_debater(self, member):
+        if member not in self.debaters_list:
+            self.debaters_list.append(member)
+            self.debater_names.append(member.name)
+            debaters = "**" + "**, **".join(self.debater_names) + "**"
 
-            for debater in debaters_list:
+            for debater in self.debaters_list:
                 if debater != member:
                     await debater.send(
                         "Игрок {0} добавлен в группу спорщиков\n"
                         "Группа спорщиков: {1}\n"
                         "Общее количество спорщиков: **{2}**".format(member.name, debaters,
-                                                                     len(debaters_list)))
+                                                                     len(self.debaters_list)))
                 else:
                     await debater.send(
                         "Вы добавлены в группу спорщиков\n"
                         "Группа спорщиков: {1}\n"
                         "Общее количество спорщиков: **{2}**".format(member.name, debaters,
-                                                                     len(debaters_list)))
-        elif member in debaters_list:
-            debaters = "**" + "**, **".join(debater_names) + "**"
+                                                                     len(self.debaters_list)))
+        elif member in self.debaters_list:
+            debaters = "**" + "**, **".join(self.debater_names) + "**"
             await member.send(
                 'Вы уже в группе спорщиков \nГруппа спорщиков: {0}\nОбщее количество '
-                'спорщиков: **{1}**'.format(debaters, len(debaters_list)))
+                'спорщиков: **{1}**'.format(debaters, len(self.debaters_list)))
 
         # we do not want the client to reply to itself
         if member == discord.Client.user:
             return
 
-    async def remove_debater(self, member, debaters_list, debater_names):
-        if member in debaters_list:
-            debaters_list.remove(member)
-            debater_names.remove(member.name)
-            debaters = "**" + "**, **".join(debater_names) + "**"
+    async def remove_debater(self, member):
+        if member in self.debaters_list:
+            self.debaters_list.remove(member)
+            self.debater_names.remove(member.name)
+            debaters = "**" + "**, **".join(self.debater_names) + "**"
             await member.send(
                 "Вы удалены из группы спорщиков\n"
                 "Группа спорщиков: {0}\n"
-                "Общее количество спорщиков: **{1}**".format(debaters, len(debaters_list)))
-            for debater in debaters_list:
+                "Общее количество спорщиков: **{1}**".format(debaters, len(self.debaters_list)))
+            for debater in self.debaters_list:
                 await debater.send(
                     "Игрок {0} удалён из группы спорщиков\n"
                     "Группа отгадчиков: {1}\n"
                     "Общее количество спорщиков: **{2}**".format(member.name, debaters,
-                                                                 len(debaters_list)))
+                                                                 len(self.debaters_list)))
 
     async def on_message(self, message):
         member = message.author
@@ -231,18 +231,18 @@ class DiscordClient(discord.Client):
                 await member.send(message_to_other_guessers)
 
         if message.content == "!d" or message.content == "!спорщик":
-            await self.add_debater(member, self.debaters_list, self.debater_names)
-            await self.remove_guesser(member, self.guessers_list, self.guesser_names)
+            await self.add_debater(member)
+            await self.remove_guesser(member)
 
         if message.content == "!g" or message.content == "!отгадчик":
-            await client.loop.create_task(self.add_guesser(member, self.guessers_list, self.guesser_names))
-            await client.loop.create_task(self.remove_debater(member, self.debaters_list, self.debater_names))
+            await client.loop.create_task(self.add_guesser(member))
+            await client.loop.create_task(self.remove_debater(member))
 
         if message.content == "!-g" or message.content == "!-отгадчик":
-            await self.remove_guesser(member, self.guessers_list, self.guesser_names)
+            await self.remove_guesser(member)
 
         if message.content == "!-d" or message.content == "!-спорщик":
-            await self.client.loop.create_task(self.remove_debater(member, self.debaters_list, self.debater_names))
+            await self.client.loop.create_task(self.remove_debater(member))
 
         # Сбросить параматеры игры
         if message.content == "!reset" or message.content == "!сброс":
