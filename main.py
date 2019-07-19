@@ -82,24 +82,24 @@ class DiscordClient(discord.Client):
                 winners.append(guesser.name)
 
         if len(self.guesser_points) < 2:
-            msg = "Победитель **{}**".format(guesser.name)
+            end_game_message = "Победитель **{}**".format(guesser.name)
         elif len(winners) < 2:
-            msg = "Победитель **{}**".format(winner.name)
+            end_game_message = "Победитель **{}**".format(winner.name)
         elif len(winners) > 1:
-            msg = "Победители {}".format("**" + "**, **".join(winners) + "**")
+            end_game_message = "Победители {}".format("**" + "**, **".join(winners) + "**")
 
         score = self.current_score()
 
         for user in self.guessers_list + self.debaters_list:
-            await user.send("{0}\n{1}\nИгра закончилась".format(score, msg))
+            await user.send("{0}\n{1}\nИгра закончилась".format(score, end_game_message))
         print("Игра закончилась")
 
     def current_score(self):
-        msg = "Общий счёт (Игрок: очки | попытки):\n"
+        score_message = "Общий счёт (Игрок: очки | попытки):\n"
         for guesser in self.guesser_points:
-            msg += "**{0}**: {1} | {2} \n".format(guesser.name, self.guesser_points[guesser],
-                                                  self.guesser_attempts[guesser])
-        return msg
+            score_message += "**{0}**: {1} | {2} \n".format(guesser.name, self.guesser_points[guesser],
+                                                            self.guesser_attempts[guesser])
+        return score_message
 
     async def add_guesser(self, member, guessers_list, guesser_names):
         if member not in guessers_list:
@@ -192,7 +192,7 @@ class DiscordClient(discord.Client):
         channel = message.channel
 
         if message.content == "!help" or message.content == "!h":
-            msg = """```Чат-бот для игры в Fallacymania
+            message_to_other_guessers = """```Чат-бот для игры в Fallacymania
 
         Команды:
 
@@ -226,9 +226,9 @@ class DiscordClient(discord.Client):
         ```"""
 
             if not self.started:
-                await channel.send(msg)
+                await channel.send(message_to_other_guessers)
             else:
-                await member.send(msg)
+                await member.send(message_to_other_guessers)
 
         if message.content == "!d" or message.content == "!спорщик":
             await self.add_debater(member, self.debaters_list, self.debater_names)
@@ -354,51 +354,47 @@ class DiscordClient(discord.Client):
             await member.send(
                 "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
 
-        # # Начиление очков
-        # if message.content == '+' or message.content == '-':
-        #     ch = await client.start_private_message(member)
-        #     if not started:
-        #         return await client.send_message(ch,
-        #                                          "Игра не запущенна. Проводить манипуляции со счётом до старта игры нельзя.".format(
-        #                                              member))
-        #
-        #     if member not in guesser_points:
-        #         return await client.send_message(ch, "'+' или '-' отправленное отгадчиком даёт или отнимает очко у "
-        #                                              "этого отгадчика. **{0}** - не отгадчик".format(member))
-        #
-        #     if message.content == "+":
-        #         self.guesser_points[member] = self.guesser_points[member] + 1
-        #         self.guesser_last_turn[member] = "plus_point"
-        #         msg = "Игрок **{0}** получил 1 очко.".format(member.name)
-        #         msg1 = "Вы получили 1 очко."
-        #     elif message.content == "-":
-        #         if self.guesser_attempts[member] > 0:
-        #             self.guesser_attempts[member] = self.guesser_attempts[member] - 1
-        #             self.guesser_last_turn[member] = "minus_attempt"
-        #             msg = "Игрок **{0}** потерял 1 попытку.".format(member.name)
-        #             msg1 = "Вы потеряли 1 попытку.".format(member.name)
-        #         else:
-        #             self.guesser_points[member] = self.guesser_points[member] - 1
-        #             self.guesser_last_turn[member] = "minus_point"
-        #             msg = "Игрок **{0}** потерял 1 очко.".format(member.name)
-        #             msg1 = "Вы потеряли 1 очко."
-        #
-        #     self.guesser_messages += 1
-        #     for guesser in self.guesser_points:
-        #         ch = await client.start_private_message(guesser)
-        #         if guesser != member:
-        #             await client.send_message(ch, "{0} {1}".format(msg,
-        #                                                            self.current_score()))
-        #         else:
-        #             await client.send_message(ch, "{0} {1}".format(msg1,
-        #                                                            self.current_score()))
-        #
-        #         # Раздать лист с софизмами после 3х сообщений о счёте
-        #         if self.guesser_messages > 2:
-        #             await client.send_message(ch,
-        #                                       "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
-        #     if self.guesser_messages > 2:
-        #         guesser_messages = 0
+        # Начиление очков
+        if message.content == '+' or message.content == '-':
+            if not self.started:
+                return await member.send(
+                    "Игра не запущенна. Проводить манипуляции со счётом до старта игры нельзя.".format(
+                        member))
+
+            if member not in self.guesser_points:
+                return await member.send("'+' или '-' отправленное отгадчиком даёт или отнимает очко у "
+                                         "этого отгадчика. **{0}** - не отгадчик".format(member))
+
+            if message.content == "+":
+                self.guesser_points[member] = self.guesser_points[member] + 1
+                self.guesser_last_turn[member] = "plus_point"
+                message_to_other_guessers = "Игрок **{0}** получил 1 очко.".format(member.name)
+                message_to_member_guesser = "Вы получили 1 очко."
+            elif message.content == "-":
+                if self.guesser_attempts[member] > 0:
+                    self.guesser_attempts[member] = self.guesser_attempts[member] - 1
+                    self.guesser_last_turn[member] = "minus_attempt"
+                    message_to_other_guessers = "Игрок **{0}** потерял 1 попытку.".format(member.name)
+                    message_to_member_guesser = "Вы потеряли 1 попытку.".format(member.name)
+                else:
+                    self.guesser_points[member] = self.guesser_points[member] - 1
+                    self.guesser_last_turn[member] = "minus_point"
+                    message_to_other_guessers = "Игрок **{0}** потерял 1 очко.".format(member.name)
+                    message_to_member_guesser = "Вы потеряли 1 очко."
+
+            self.guesser_messages += 1
+            for guesser in self.guesser_points:
+                if guesser != member:
+                    await guesser.send("{0} {1}".format(message_to_other_guessers, self.current_score()))
+                else:
+                    await guesser.send("{0} {1}".format(message_to_member_guesser, self.current_score()))
+
+                # Раздать лист с софизмами после 3х сообщений о счёте
+                if self.guesser_messages > 2:
+                    await guesser.send(
+                        "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
+            if self.guesser_messages > 2:
+                self.guesser_messages = 0
         #
         # # Отмена
         # if message.content == '!z' or message.content == '..':
