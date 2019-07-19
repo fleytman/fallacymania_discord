@@ -395,54 +395,54 @@ class DiscordClient(discord.Client):
                         "http://i.imgur.com/ivEjvmi.png\nhttp://i.imgur.com/BukCpJ7.png\nhttp://i.imgur.com/s4qav82.png")
             if self.guesser_messages > 2:
                 self.guesser_messages = 0
-        #
-        # # Отмена
-        # if message.content == '!z' or message.content == '..':
-        #     ch = await client.start_private_message(member)
-        #
-        #     if not started:
-        #         return await client.send_message(ch, "Игра не запущенна. Нельзя отменить последнее действие".format(
-        #             member))
-        #
-        #     elif member not in guesser_last_turn:
-        #         return await client.send_message(ch, "Отменить последнее действие может только отгадчик.".format(
-        #             member))
-        #
-        #     elif self.guesser_last_turn[member] is None:
-        #         return await client.send_message(ch, "Вы ещё не совершали никаких действия")
-        #
-        #     elif self.guesser_last_turn[member] == "returned":
-        #         return await client.send_message(ch,
-        #                                          "Вы уже отменили своё действие. Отменять больше 1 действия подряд нельзя.")
-        #
-        #     elif self.guesser_last_turn[member] == "plus_point":
-        #         self.guesser_points[member] = self.guesser_points[member] - 1
-        #         self.guesser_last_turn[member] = "returned"
-        #         msg = "Игрок **{0}** отменил своё последнее действие. У него забирается 1 очко.".format(member.name)
-        #         msg1 = "Вы отменили своё последнее действие. У вас забирается 1 очко."
-        #
-        #     elif self.guesser_last_turn[member] == "minus_point":
-        #         self.guesser_points[member] = self.guesser_points[member] + 1
-        #         self.guesser_last_turn[member] = "minus_point"
-        #         self.guesser_last_turn[member] = "returned"
-        #         msg = "Игрок **{0}** отменил своё последнее действие. Ему возвращается 1 очко.".format(member.name)
-        #         msg1 = "Вы отменили своё последнее действие. Вам возвращается 1 очко."
-        #
-        #     elif self.guesser_last_turn[member] == "minus_attempt":
-        #         self.guesser_attempts[member] = self.guesser_attempts[member] + 1
-        #         self.guesser_last_turn[member] = "returned"
-        #         msg = "Игрок **{0}** отменил своё последнее действие. Ему возвращается 1 попытка.".format(
-        #             member.name)
-        #         msg1 = "Вы отменили своё последнее действие. Вам возвращается 1 попытка.".format(member.name)
-        #
-        #     for guesser in self.guesser_points:
-        #         ch = await client.start_private_message(guesser)
-        #         if guesser != member:
-        #             await client.send_message(ch, "{0} {1}".format(msg,
-        #                                                            self.current_score()))
-        #         else:
-        #             await client.send_message(ch, "{0} {1}".format(msg1,
-        #                                                            self.current_score()))
+
+        # Отмена
+        if message.content == '!z' or message.content == '..':
+            if not self.started:
+                return await member.send("Игра не запущенна. Нельзя отменить последнее действие".format(
+                    member))
+
+            elif member not in self.guesser_last_turn:
+                return await member.send("Отменить последнее действие может только отгадчик.".format(
+                    member))
+
+            elif self.guesser_last_turn[member] is None:
+                return await member.send("Вы ещё не совершали никаких действия")
+
+            elif self.guesser_last_turn[member] == "returned":
+                return await member.send("Вы уже отменили своё действие. Отменять больше 1 действия подряд нельзя.")
+
+            elif self.guesser_last_turn[member] == "plus_point":
+                self.guesser_points[member] = self.guesser_points[member] - 1
+                self.guesser_last_turn[member] = "returned"
+                message_to_other_players = "Игрок **{0}** отменил своё последнее действие. У него забирается 1 очко.".format(
+                    member.name)
+                message_to_member_player = "Вы отменили своё последнее действие. У вас забирается 1 очко."
+
+            elif self.guesser_last_turn[member] == "minus_point":
+                self.guesser_points[member] = self.guesser_points[member] + 1
+                self.guesser_last_turn[member] = "minus_point"
+                self.guesser_last_turn[member] = "returned"
+                message_to_other_players = "Игрок **{0}** отменил своё последнее действие. Ему возвращается 1 очко.".format(
+                    member.name)
+                message_to_member_player = "Вы отменили своё последнее действие. Вам возвращается 1 очко."
+
+            elif self.guesser_last_turn[member] == "minus_attempt":
+                self.guesser_attempts[member] = self.guesser_attempts[member] + 1
+                self.guesser_last_turn[member] = "returned"
+                message_to_other_players = "Игрок **{0}** отменил своё последнее действие. Ему возвращается 1 попытка.".format(
+                    member.name)
+                message_to_member_player = "Вы отменили своё последнее действие. Вам возвращается 1 попытка.".format(
+                    member.name)
+
+            for guesser in self.guesser_points:
+                ch = await client.start_private_message(guesser)
+                if guesser != member:
+                    await client.send_message(ch, "{0} {1}".format(message_to_other_players,
+                                                                   self.current_score()))
+                else:
+                    await client.send_message(ch, "{0} {1}".format(message_to_member_player,
+                                                                   self.current_score()))
 
         # Удаляет карту в сброс
         if message.content.isdigit() and len(message.content) < 3 and member in self.debaters_list:
