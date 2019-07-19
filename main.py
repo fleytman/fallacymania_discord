@@ -39,7 +39,15 @@ class DiscordClient(discord.Client):
         self.pack = {}
         self.discard = []
 
-        self.t = 5
+        try:
+            config = load_config()
+            self.t = config["t"]
+        except:
+            self.t = 1200
+            logger.error(
+                "Файл config.ini отсуствует или содержит некорретные данные, были загруженны настройки по умолчанию.")
+
+        print(self.t)
         self.game_timer = GameTimer.RenewableTimer(self.t, self.end)
 
         self.started = False
@@ -543,14 +551,6 @@ if __name__ == "__main__":
     description = '''Чат-бот для игры в fallacymania'''
     # ------------------------------------------------------------------------------
     # Переменная отвечает за то запущенна ли игра
-
-    try:
-        config = load_config()
-        t = config["t"]
-    except:
-        t = 1200
-        logger.error(
-            "Файл config.ini отсуствует или содержит некорретные данные, были загруженны настройки по умолчанию.")
 
     client = DiscordClient()
     client.run(token)
